@@ -1,11 +1,14 @@
 import requests
+import pyduktape
+from pycasso import UnscrambleImg as pyc
 from bs4 import BeautifulSoup as bs
 
 class Pyccoma:
     CSRF_NAME = 'csrfmiddlewaretoken'
-    api_base = 'https://api.piccoma.com/'
     login_url = 'https://piccoma.com/web/acc/email/signin'
     login_type = ['email', 'facebook', 'twitter', 'apple']
+
+    piccoma_s_js = requests.get('https://piccoma.com/static/web/js/viewer/_s.min.js?1628219080').text
 
     def __init__(self, url):
         self.url = url
@@ -23,18 +26,18 @@ class Pyccoma:
         }
         self.session = requests.session()
 
-    def start(self):
-        return self.session.get(self.login_url)
-
     def parse(self, page):
         return bs(page, 'html.parser')
 
-    def cookies(self):
-        return self.start().cookies
+    def login_session(self):
+        return self.session.get(self.login_url, headers=self.headers)
 
     def login_csrf(self):
-        soup = self.parse(self.start().text)
+        soup = self.parse(self.login_session().text)
         return soup.find('input', attrs={'name': self.CSRF_NAME})['value']
+
+    def cookies(self):
+        return self.login_session().cookies
 
     def login(self, email, password):
         params = {
@@ -48,17 +51,44 @@ class Pyccoma:
                           cookies=self.cookies(),
                           headers=self.headers)
 
+    def execute(self, script):
+        ctx = pyduktape.DuktapeContext()
+        output = ctx.eval_js(script)
+        return output
+
+    def get_checksum(self, img_url):
+        return img_url.split('/')[-2]
+
+    def get_key(self, img_url):
+        return img_url.split('?')[1].split('&')[1].split('=')[1]
+
+    def get_seed(self, checksum, expiry_key):
+        init = """
+               Object.defineProperty(new Function('return this')(), 'window', {
+                value: new Function('return this')(),
+                writable: false, enumerable: true, configurable: false
+               });
+               """
+        js = init + self.piccoma_s_js + "get_seed('" + checksum + "','" + expiry_key + "');"
+        return self.execute(js)
+
     def get_image(self):
         page = self.session.get(self.url).text
         soup = self.parse(page)
         script = soup.findAll('script')[5]
         data = str(script).split('img')[1]
         images = ["https://" + image.split("',")[0].strip() for image in data.split("{'path':'//") if "'," in image]
-        print(images)
+        return images
 
-    def parse_qs(self, img_url):
-        seed = img_url.split('/')[6]
-        return seed[-14:] + seed[:8]
+    def fetch(self):
+        chapter = self.get_image()
+        checksum = self.get_checksum(chapter[0])
+        key = self.get_key(chapter[0])
 
-    def get_seed(self):
-        return self.parse_qs(self.get_image()[0])
+        slice_size = 50
+        seed = self.get_seed(checksum, key)
+
+        for index, page in enumerate(chapter):
+            e = requests.get(page, stream=True).raw
+            t = pyc(e, slice_size, seed, str(index))
+            t.unscramble()
