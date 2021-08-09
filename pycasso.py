@@ -1,5 +1,4 @@
 import math
-import requests
 import pyduktape
 import PIL.Image
 
