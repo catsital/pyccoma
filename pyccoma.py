@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 from pycasso import UnscrambleImg as pyc
 from bs4 import BeautifulSoup as bs
@@ -25,7 +26,9 @@ class Pyccoma:
         return soup
 
     def parse_title(self, url):
-        return self.parse_page(url).find('title').text
+        pattern = re.compile(r'[?"|:<>*/\\]', flags=re.VERBOSE)
+        title = self.parse_page(url).find('title').text
+        return pattern.sub("", str(title))
 
     def login_session(self):
         return self.session.get(self.login_url, headers=self.headers)
@@ -66,7 +69,7 @@ class Pyccoma:
         images = ["https://" + image.split("',")[0].strip() for image in data.split("{'path':'//") if "'," in image]
         return images
 
-    def fetch(self, url, path='extract/'):
+    def fetch(self, url, path='extract'):
         try:
             chapter_title = self.parse_title(url).split("｜")[0]
             series_title = self.parse_title(url).split("｜")[1]
@@ -85,5 +88,5 @@ class Pyccoma:
                 img = requests.get(page, stream=True).raw
                 canvas = pyc(img, slice_size, seed, dest_path + str(page_num+1))
                 canvas.unscramble()
-        except KeyboardInterrupt as e:
+        except Exception as e:
             raise
