@@ -7,6 +7,7 @@ name = "pypi"
 bs4 = "*"
 requests = "*"
 pyduktape = "*"
+pillow = "*"
 
 [dev-packages]
 
