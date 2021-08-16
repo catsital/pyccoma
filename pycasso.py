@@ -13,9 +13,6 @@ class UnscrambleImg:
     def unscramble(self):
         img_width, img_height = self.img.size
         total_parts = math.ceil(img_width/self.slice_size) * math.ceil(img_height/self.slice_size)
-        inds = []
-        for i in range(0, total_parts):
-            inds.append(i)
 
         if not self.bmp:
             ctx = PIL.Image.new(mode="RGB",
@@ -55,7 +52,10 @@ class UnscrambleImg:
                 if not t == slices[i]['y']:
                     return i
                     break
-            return i
+            if (img_width|img_height)%total_parts != 0:
+                return i+1
+            else:
+                return i
 
         def get_group(slices):
             self = {}

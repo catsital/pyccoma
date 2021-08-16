@@ -4,7 +4,7 @@ import requests
 from pycasso import UnscrambleImg as pyc
 from bs4 import BeautifulSoup as bs
 
-class Pyccoma:
+class Scraper:
     CSRF_NAME = 'csrfmiddlewaretoken'
     login_url = 'https://piccoma.com/web/acc/email/signin'
     login_type = ['email', 'facebook', 'twitter', 'apple']
@@ -17,15 +17,15 @@ class Pyccoma:
         }
         self.session = requests.session()
 
-    def parse(self, page):
+    def parse(self, page) -> str:
         return bs(page, 'html.parser')
 
-    def parse_page(self, url):
+    def parse_page(self, url) -> str:
         page = self.session.get(url, headers=self.headers).text
         soup = self.parse(page)
         return soup
 
-    def parse_title(self, url):
+    def parse_title(self, url) -> str:
         pattern = re.compile(r'[?"|:<>*/\\]', flags=re.VERBOSE)
         title = self.parse_page(url).find('title').text
         return pattern.sub("", str(title))
@@ -33,11 +33,11 @@ class Pyccoma:
     def login_session(self):
         return self.session.get(self.login_url, headers=self.headers)
 
-    def login_csrf(self):
+    def login_csrf(self) -> str:
         soup = self.parse(self.login_session().text)
         return soup.find('input', attrs={'name': self.CSRF_NAME})['value']
 
-    def cookies(self):
+    def cookies(self) -> str:
         return self.login_session().cookies
 
     def login(self, email, password):
@@ -52,18 +52,18 @@ class Pyccoma:
                           cookies=self.cookies(),
                           headers=self.headers)
 
-    def get_checksum(self, img_url):
+    def get_checksum(self, img_url) -> str:
         return img_url.split('/')[-2]
 
-    def get_key(self, img_url):
+    def get_key(self, img_url) -> str:
         return img_url.split('?')[1].split('&')[1].split('=')[1]
 
-    def get_seed(self, checksum, expiry_key):
+    def get_seed(self, checksum, expiry_key) -> str:
         for num in expiry_key:
             if int(num) != 0: checksum = checksum[-int(num):] + checksum[:len(checksum)-int(num)]
         return checksum
 
-    def get_image(self, url):
+    def get_image(self, url) -> list:
         script = self.parse_page(url).findAll('script')[5]
         data = str(script).split('img')[1]
         images = ["https://" + image.split("',")[0].strip() for image in data.split("{'path':'//") if "'," in image]
