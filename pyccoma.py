@@ -85,7 +85,7 @@ class Scraper:
             seed = self.get_seed(checksum, key)
 
             for page_num, page in enumerate(chapter):
-                img = requests.get(page, stream=True).raw
+                img = requests.get(page, headers=self.headers, stream=True).raw
                 canvas = pyc(img, slice_size, seed, dest_path + str(page_num+1))
                 canvas.unscramble()
         except Exception as e:
