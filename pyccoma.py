@@ -7,7 +7,6 @@ from bs4 import BeautifulSoup as bs
 class Scraper:
     CSRF_NAME = 'csrfmiddlewaretoken'
     login_url = 'https://piccoma.com/web/acc/email/signin'
-    login_type = ['email', 'facebook', 'twitter', 'apple']
 
     def __init__(self):
         self.headers = {
@@ -30,26 +29,29 @@ class Scraper:
         title = self.parse_page(url).find('title').text
         return pattern.sub("", str(title))
 
+    @property
     def login_session(self):
         return self.session.get(self.login_url, headers=self.headers)
 
+    @property
     def login_csrf(self) -> str:
-        soup = self.parse(self.login_session().text)
+        soup = self.parse(self.login_session.text)
         return soup.find('input', attrs={'name': self.CSRF_NAME})['value']
 
+    @property
     def cookies(self) -> str:
-        return self.login_session().cookies
+        return self.login_session.cookies
 
-    def login(self, email, password):
+    def login(self, email, password) -> None:
         params = {
-            self.CSRF_NAME: self.login_csrf(),
+            self.CSRF_NAME: self.login_csrf,
             'next_url': '/web/',
             'email': email,
             'password': password
         }
         self.session.post(self.login_url,
                           data=params,
-                          cookies=self.cookies(),
+                          cookies=self.cookies,
                           headers=self.headers)
 
     def get_checksum(self, img_url) -> str:
@@ -69,7 +71,7 @@ class Scraper:
         images = ["https://" + image.split("',")[0].strip() for image in data.split("{'path':'//") if "'," in image]
         return images
 
-    def fetch(self, url, path='extract'):
+    def fetch(self, url, path='extract') -> None:
         try:
             chapter_title = self.parse_title(url).split("｜")[0]
             series_title = self.parse_title(url).split("｜")[1]
@@ -85,8 +87,14 @@ class Scraper:
             seed = self.get_seed(checksum, key)
 
             for page_num, page in enumerate(chapter):
-                img = requests.get(page, headers=self.headers, stream=True).raw
-                canvas = pyc(img, slice_size, seed, dest_path + str(page_num+1))
-                canvas.unscramble()
+                img = requests.get(page, headers=self.headers, stream=True)
+                output = dest_path + str(page_num+1)
+                if checksum.isupper():
+                    canvas = pyc(img.raw, slice_size, seed, output)
+                    canvas.unscramble()
+                else:
+                    with open(output + '.png', 'wb') as handler:
+                        handler.write(img.content)
+
         except Exception as e:
             raise
