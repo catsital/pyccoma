@@ -1,6 +1,8 @@
 import os
 import re
+import time
 import requests
+import threading
 from pycasso import UnscrambleImg as pyc
 from bs4 import BeautifulSoup as bs
 
@@ -65,11 +67,30 @@ class Scraper:
             if int(num) != 0: checksum = checksum[-int(num):] + checksum[:len(checksum)-int(num)]
         return checksum
 
-    def get_image(self, url) -> list:
+    def get_pdata(self, url) -> dict:
         script = self.parse_page(url).findAll('script')[5]
-        data = str(script).split('img')[1]
-        images = ["https://" + image.split("',")[0].strip() for image in data.split("{'path':'//") if "'," in image]
-        return images
+        title = str(script).split('title')[1].split("'")[2].strip()
+        is_scrambled = str(script).split('isScrambled')[1].split(":")[1].split(",")[0].strip().title()
+        links = str(script).split('img')[1]
+        images = ["https://" + image.split("',")[0].strip() for image in links.split("{'path':'//") if "'," in image]
+        pdata = {
+            'title': title,
+            'is_scrambled': eval(is_scrambled),
+            'img': images
+        }
+        return pdata
+
+    def get_image(self, chapter, seed, output) -> None:
+        img = requests.get(chapter, headers=self.headers, stream=True)
+        if img.status_code == 200:
+            if seed.isupper():
+                canvas = pyc(img.raw, 50, seed, output)
+                canvas.unscramble()
+            else:
+                with open(output + '.png', 'wb') as handler:
+                    for chunk in img.iter_content(1024):
+                        if chunk:
+                            handler.write(chunk)
 
     def fetch(self, url, path='extract') -> None:
         try:
@@ -77,24 +98,18 @@ class Scraper:
             series_title = self.parse_title(url).split("｜")[1]
             leaf_path = series_title + "/" + chapter_title + "/"
             dest_path = os.path.join(path, leaf_path)
-            os.makedirs(dest_path)
+            os.makedirs(dest_path, exist_ok=True)
 
-            chapter = self.get_image(url)
+            chapter = self.get_pdata(url)['img']
             checksum = self.get_checksum(chapter[0])
             key = self.get_key(chapter[0])
-
-            slice_size = 50
             seed = self.get_seed(checksum, key)
 
             for page_num, page in enumerate(chapter):
-                img = requests.get(page, headers=self.headers, stream=True)
                 output = dest_path + str(page_num+1)
-                if checksum.isupper():
-                    canvas = pyc(img.raw, slice_size, seed, output)
-                    canvas.unscramble()
-                else:
-                    with open(output + '.png', 'wb') as handler:
-                        handler.write(img.content)
+                time.sleep(1)
+                download = threading.Thread(target=self.get_image, args=(page, seed, output))
+                download.start()
 
         except Exception as e:
             raise
