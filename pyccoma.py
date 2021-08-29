@@ -3,6 +3,7 @@ import re
 import time
 import requests
 import threading
+from datetime import datetime
 from pycasso import UnscrambleImg as pyc
 from bs4 import BeautifulSoup as bs
 
@@ -71,7 +72,7 @@ class Scraper:
         script = self.parse_page(url).findAll('script')[5]
         title = str(script).split('title')[1].split("'")[2].strip()
         is_scrambled = str(script).split('isScrambled')[1].split(":")[1].split(",")[0].strip().title()
-        links = str(script).split('img')[1]
+        links = str(script).split("'img'")[1]
         images = ["https://" + image.split("',")[0].strip() for image in links.split("{'path':'//") if "'," in image]
         pdata = {
             'title': title,
@@ -92,6 +93,8 @@ class Scraper:
                         if chunk:
                             handler.write(chunk)
 
+            print('Downloading ' + chapter)
+
     def fetch(self, url, path='extract') -> None:
         try:
             chapter_title = self.parse_title(url).split("｜")[0]
@@ -105,11 +108,18 @@ class Scraper:
             key = self.get_key(chapter[0])
             seed = self.get_seed(checksum, key)
 
+            start_time = datetime.now()
+
             for page_num, page in enumerate(chapter):
                 output = dest_path + str(page_num+1)
-                time.sleep(1)
                 download = threading.Thread(target=self.get_image, args=(page, seed, output))
                 download.start()
+                time.sleep(1)
+
+            end_time = datetime.now()
+            exec_time = end_time - start_time
+
+            print('Total elapsed time: ' + str(exec_time))
 
         except Exception as e:
             raise
