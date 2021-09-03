@@ -1,11 +1,13 @@
 import os
 import re
 import time
+import logging
 import requests
 import threading
-from datetime import datetime
 from pycasso import UnscrambleImg as pyc
 from bs4 import BeautifulSoup as bs
+
+log = logging.getLogger(__name__)
 
 class Scraper:
     CSRF_NAME = 'csrfmiddlewaretoken'
@@ -82,18 +84,23 @@ class Scraper:
         return pdata
 
     def get_image(self, chapter, seed, output) -> None:
-        img = requests.get(chapter, headers=self.headers, stream=True)
-        if img.status_code == 200:
-            if seed.isupper():
-                canvas = pyc(img.raw, 50, seed, output)
-                canvas.unscramble()
-            else:
-                with open(output + '.png', 'wb') as handler:
-                    for chunk in img.iter_content(1024):
-                        if chunk:
-                            handler.write(chunk)
+        try:
+            img = requests.get(chapter, headers=self.headers, stream=True)
+            if img.status_code == 200:
+                if seed.isupper():
+                    canvas = pyc(img.raw, 50, seed, output)
+                    canvas.unscramble()
+                else:
+                    with open(output + '.png', 'wb') as handler:
+                        for chunk in img.iter_content(1024):
+                            if chunk:
+                                handler.write(chunk)
 
-            print('Downloading ' + chapter)
+                log.info('Downloading ' + output)
+            else:
+                log.error('Failed to download ' + chapter)
+        except Exception as e:
+            log.error('Encountered error: ' + str(e))
 
     def fetch(self, url, path='extract') -> None:
         try:
@@ -108,18 +115,19 @@ class Scraper:
             key = self.get_key(chapter[0])
             seed = self.get_seed(checksum, key)
 
-            start_time = datetime.now()
+            start_time = time.time()
 
             for page_num, page in enumerate(chapter):
                 output = dest_path + str(page_num+1)
-                download = threading.Thread(target=self.get_image, args=(page, seed, output))
-                download.start()
-                time.sleep(1)
+                if os.path.exists(output + ".png"):
+                    log.warning('Skipping download, file already exists!')
+                else:
+                    download = threading.Thread(target=self.get_image, args=(page, seed, output))
+                    download.start()
+                    time.sleep(1)
 
-            end_time = datetime.now()
-            exec_time = end_time - start_time
-
-            print('Total elapsed time: ' + str(exec_time))
+            exec_time = time.time() - start_time
+            log.debug('Total elapsed time: ' + str(exec_time))
 
         except Exception as e:
-            raise
+            log.error('Encountered error: ' + str(e))
