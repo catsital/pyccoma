@@ -20,6 +20,7 @@ class Scraper:
             'Referer': 'https://piccoma.com/web/acc/signin?next_url=/web/'
         }
         self.session = requests.session()
+        self.session.verify = True
 
     def parse(self, page) -> str:
         return bs(page, 'html.parser')
@@ -48,6 +49,7 @@ class Scraper:
         return self.login_session.cookies
 
     def login(self, email, password) -> None:
+        log.debug("Logging in as {0}".format(email))
         params = {
             self.CSRF_NAME: self.login_csrf,
             'next_url': '/web/',
@@ -70,6 +72,18 @@ class Scraper:
             if int(num) != 0: checksum = checksum[-int(num):] + checksum[:len(checksum)-int(num)]
         return checksum
 
+    def get_episode_list(self, url):
+        if 'episodes' not in url:
+            log.error('Not a valid url')
+        else:
+            page = self.parse_page(url).find('ul', attrs={'id':'js_episodeList'})
+            series_id = url.split('/')[-2]
+            episode_title = [title.text for title in page.findAll('h2')]
+            episode_link = ["https://piccoma.com/web/viewer/{0}/{1}".format(series_id, episode_id['data-episode_id'])
+                            for episode_id in page.select('a[data-episode_id]')]
+            episodes = {title:link for title, link in zip(episode_title, episode_link)}
+            return episodes
+
     def get_pdata(self, url) -> dict:
         script = self.parse_page(url).findAll('script')[5]
         title = str(script).split('title')[1].split("'")[2].strip()
@@ -83,9 +97,9 @@ class Scraper:
         }
         return pdata
 
-    def get_image(self, chapter, seed, output) -> None:
+    def get_image(self, episode, seed, output) -> None:
         try:
-            img = requests.get(chapter, headers=self.headers, stream=True)
+            img = requests.get(episode, headers=self.headers, stream=True)
             if img.status_code == 200:
                 if seed.isupper():
                     canvas = pyc(img.raw, 50, seed, output)
@@ -96,38 +110,38 @@ class Scraper:
                             if chunk:
                                 handler.write(chunk)
 
-                log.info('Downloading ' + output)
+                log.info('Downloading: {0}'.format(output))
             else:
-                log.error('Failed to download ' + chapter)
-        except Exception as e:
-            log.error('Encountered error: ' + str(e))
+                log.error('Failed to download: {0}'.format(episode))
+        except Exception as exception:
+            log.error('<{0}> Encountered error: {1}'.format(output, exception))
 
     def fetch(self, url, path='extract') -> None:
         try:
-            chapter_title = self.parse_title(url).split("｜")[0]
+            episode_title = self.parse_title(url).split("｜")[0]
             series_title = self.parse_title(url).split("｜")[1]
-            leaf_path = series_title + "/" + chapter_title + "/"
+            leaf_path = series_title + "/" + episode_title + "/"
             dest_path = os.path.join(path, leaf_path)
             os.makedirs(dest_path, exist_ok=True)
 
-            chapter = self.get_pdata(url)['img']
-            checksum = self.get_checksum(chapter[0])
-            key = self.get_key(chapter[0])
+            episode = self.get_pdata(url)['img']
+            checksum = self.get_checksum(episode[0])
+            key = self.get_key(episode[0])
             seed = self.get_seed(checksum, key)
 
             start_time = time.time()
 
-            for page_num, page in enumerate(chapter):
+            for page_num, page in enumerate(episode):
                 output = dest_path + str(page_num+1)
                 if os.path.exists(output + ".png"):
-                    log.warning('Skipping download, file already exists!')
+                    log.warning('Skipping download, file already exists: {0}.png'.format(output))
                 else:
                     download = threading.Thread(target=self.get_image, args=(page, seed, output))
                     download.start()
                     time.sleep(1)
 
             exec_time = time.time() - start_time
-            log.debug('Total elapsed time: ' + str(exec_time))
+            log.debug('Total elapsed time: {0}'.format(exec_time))
 
-        except Exception as e:
-            log.error('Encountered error: ' + str(e))
+        except Exception as exception:
+            log.error('Encountered error: {0}'.format(exception))
