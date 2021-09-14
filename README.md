@@ -67,8 +67,11 @@ If no value is supplied, it automatically creates an `extract` folder inside the
 `login(email, password)`
 * Creates an authentication session to the website (only supports email method so far)
 
-`get_image(url)`
-* Returns a list of image links parsed from a page
+`get_pdata(url)`
+* Returns a dictionary of chapter data (including image links) parsed from a page
+
+`get_episode_list(url)`
+* Returns a dictionary of chapter links parsed from a series page
 
 `fetch(url, path)`
 * Downloads the images parsed from a page
@@ -79,4 +82,4 @@ See [LICENSE](https://github.com/catsital/pyccoma/blob/main/LICENSE) for details
 
 ## Disclaimer
 
-Pyccoma was made for the sole purpose of helping users download media from [Piccoma](https://piccoma.com) for offline consumption. This is for personal use only, do not use this tool to promote piracy.
+Pyccoma was made for the sole purpose of helping users download media from [Piccoma](https://piccoma.com) for offline consumption. This is for private use only, do not use this tool to promote piracy.
