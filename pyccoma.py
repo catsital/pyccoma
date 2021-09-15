@@ -16,8 +16,7 @@ class Scraper:
     def __init__(self):
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-            'Referer': 'https://piccoma.com/web/acc/signin?next_url=/web/'
+            'Referer': '{0}?next_url=/web/'.format(self.login_url)
         }
         self.session = requests.session()
         self.session.verify = True
@@ -73,29 +72,37 @@ class Scraper:
         return checksum
 
     def get_episode_list(self, url):
-        if 'episodes' not in url:
-            log.error('Not a valid url')
-        else:
-            page = self.parse_page(url).find('ul', attrs={'id':'js_episodeList'})
-            series_id = url.split('/')[-2]
-            episode_title = [title.text for title in page.findAll('h2')]
-            episode_link = ["https://piccoma.com/web/viewer/{0}/{1}".format(series_id, episode_id['data-episode_id'])
-                            for episode_id in page.select('a[data-episode_id]')]
-            episodes = {title:link for title, link in zip(episode_title, episode_link)}
-            return episodes
+        try:
+            if 'episodes' not in url:
+                log.error('Invalid url - unable to fetch all episode links')
+            else:
+                page = self.parse_page(url).find('ul', attrs={'id':'js_episodeList'})
+                series_id = url.split('/')[-2]
+                episode_title = [title.text for title in page.findAll('h2')]
+                episode_link = ["https://piccoma.com/web/viewer/{0}/{1}".format(series_id, episode_id['data-episode_id'])
+                                for episode_id in page.select('a[data-episode_id]')]
+                episodes = {title:link for title, link in zip(episode_title, episode_link)}
+                return episodes
+
+        except IndexError:
+            log.error('Invalid url - unable to fetch episode list')
 
     def get_pdata(self, url) -> dict:
-        script = self.parse_page(url).findAll('script')[5]
-        title = str(script).split('title')[1].split("'")[2].strip()
-        is_scrambled = str(script).split('isScrambled')[1].split(":")[1].split(",")[0].strip().title()
-        links = str(script).split("'img'")[1]
-        images = ["https://" + image.split("',")[0].strip() for image in links.split("{'path':'//") if "'," in image]
-        pdata = {
-            'title': title,
-            'is_scrambled': eval(is_scrambled),
-            'img': images
-        }
-        return pdata
+        try:
+            script = self.parse_page(url).findAll('script')[5]
+            title = str(script).split('title')[1].split("'")[2].strip()
+            is_scrambled = str(script).split('isScrambled')[1].split(":")[1].split(",")[0].strip().title()
+            links = str(script).split("'img'")[1]
+            images = ["https://" + image.split("',")[0].strip() for image in links.split("{'path':'//") if "'," in image]
+            pdata = {
+                'title': title,
+                'is_scrambled': eval(is_scrambled),
+                'img': images
+            }
+            return pdata
+
+        except IndexError:
+            log.error('Invalid url - unable to fetch page data')
 
     def get_image(self, episode, seed, output) -> None:
         try:
@@ -113,35 +120,41 @@ class Scraper:
                 log.info('Downloading: {0}'.format(output))
             else:
                 log.error('Failed to download: {0}'.format(episode))
+
         except Exception as exception:
-            log.error('<{0}> Encountered error: {1}'.format(output, exception))
+            log.error('<{0}.png> Encountered error: {1}'.format(output, exception))
 
     def fetch(self, url, path='extract') -> None:
         try:
-            episode_title = self.parse_title(url).split("｜")[0]
-            series_title = self.parse_title(url).split("｜")[1]
-            leaf_path = series_title + "/" + episode_title + "/"
-            dest_path = os.path.join(path, leaf_path)
-            os.makedirs(dest_path, exist_ok=True)
+            if "ログイン" in self.parse_title(url):
+                log.error('Login required - unable to fetch episode')
 
-            episode = self.get_pdata(url)['img']
-            checksum = self.get_checksum(episode[0])
-            key = self.get_key(episode[0])
-            seed = self.get_seed(checksum, key)
+            else:
+                episode_title = self.parse_title(url).split("｜")[0]
+                series_title = self.parse_title(url).split("｜")[1]
 
-            start_time = time.time()
+                leaf_path = series_title + "/" + episode_title + "/"
+                dest_path = os.path.join(path, leaf_path)
+                os.makedirs(dest_path, exist_ok=True)
 
-            for page_num, page in enumerate(episode):
-                output = dest_path + str(page_num+1)
-                if os.path.exists(output + ".png"):
-                    log.warning('Skipping download, file already exists: {0}.png'.format(output))
-                else:
-                    download = threading.Thread(target=self.get_image, args=(page, seed, output))
-                    download.start()
-                    time.sleep(1)
+                episode = self.get_pdata(url)['img']
+                checksum = self.get_checksum(episode[0])
+                key = self.get_key(episode[0])
+                seed = self.get_seed(checksum, key)
 
-            exec_time = time.time() - start_time
-            log.debug('Total elapsed time: {0}'.format(exec_time))
+                start_time = time.time()
+
+                for page_num, page in enumerate(episode):
+                    output = dest_path + str(page_num+1)
+                    if os.path.exists(output + ".png"):
+                        log.warning('Skipping download, file already exists: {0}.png'.format(output))
+                    else:
+                        download = threading.Thread(target=self.get_image, args=(page, seed, output))
+                        download.start()
+                        time.sleep(1)
+
+                exec_time = time.time() - start_time
+                log.debug('Total elapsed time: {0}'.format(exec_time))
 
         except Exception as exception:
             log.error('Encountered error: {0}'.format(exception))
