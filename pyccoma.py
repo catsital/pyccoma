@@ -29,19 +29,13 @@ class Scraper:
         soup = self.parse(page)
         return soup
 
-    def parse_title(self, url) -> str:
-        pattern = re.compile(r'[?"|:<>*/\\]', flags=re.VERBOSE)
-        title = self.parse_page(url).find('title').text
-        return pattern.sub("", str(title))
-
     @property
     def login_session(self):
         return self.session.get(self.login_url, headers=self.headers)
 
     @property
     def login_csrf(self) -> str:
-        soup = self.parse(self.login_session.text)
-        return soup.find('input', attrs={'name': self.CSRF_NAME})['value']
+        return self.parse(self.login_session.text).find('input', attrs={'name': self.CSRF_NAME})['value']
 
     @property
     def cookies(self) -> str:
@@ -64,7 +58,12 @@ class Scraper:
     def is_login(self) -> bool:
         soup = self.parse(self.login_session.text).findAll('script')[3]
         login = str(soup).split('login')[1].split(":")[1].split(",")[0].strip().title()
-        return eval(login) 
+        return eval(login)
+
+    @staticmethod
+    def safe_filename(title) -> str:
+        pattern = re.compile(r'[?"|:<>*/\\]', flags=re.VERBOSE)
+        return pattern.sub("", str(title))
 
     def get_checksum(self, img_url) -> str:
         return img_url.split('/')[-2]
@@ -95,13 +94,17 @@ class Scraper:
 
     def get_pdata(self, url) -> dict:
         try:
-            script = self.parse_page(url).findAll('script')[5]
-            title = str(script).split('title')[1].split("'")[2].strip()
+            page = self.parse_page(url)
+            title = self.safe_filename(page.find('title').text.split("｜")[1])
+            script = page.findAll('script')[5]
+
+            ep_title = str(script).split('title')[1].split("'")[2].strip()
             is_scrambled = str(script).split('isScrambled')[1].split(":")[1].split(",")[0].strip().title()
             links = str(script).split("'img'")[1]
             images = ["https://" + image.split("',")[0].strip() for image in links.split("{'path':'//") if "'," in image]
             pdata = {
                 'title': title,
+                'ep_title': ep_title,
                 'is_scrambled': eval(is_scrambled),
                 'img': images
             }
@@ -132,18 +135,16 @@ class Scraper:
 
     def fetch(self, url, path='extract') -> None:
         try:
-            if "ログイン" in self.parse_title(url):
+            pdata = self.get_pdata(url)
+            if "ログイン" in pdata['title']:
                 log.error('Login required - unable to fetch episode')
 
             else:
-                episode_title = self.parse_title(url).split("｜")[0]
-                series_title = self.parse_title(url).split("｜")[1]
-
-                leaf_path = series_title + "/" + episode_title + "/"
+                leaf_path = pdata['title'] + "/" + pdata['ep_title'] + "/"
                 dest_path = os.path.join(path, leaf_path)
                 os.makedirs(dest_path, exist_ok=True)
 
-                episode = self.get_pdata(url)['img']
+                episode = pdata['img']
                 checksum = self.get_checksum(episode[0])
                 key = self.get_key(episode[0])
                 seed = self.get_seed(checksum, key)
