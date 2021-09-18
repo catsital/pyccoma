@@ -60,6 +60,12 @@ class Scraper:
                           cookies=self.cookies,
                           headers=self.headers)
 
+    @property
+    def is_login(self) -> bool:
+        soup = self.parse(self.login_session.text).findAll('script')[3]
+        login = str(soup).split('login')[1].split(":")[1].split(",")[0].strip().title()
+        return eval(login) 
+
     def get_checksum(self, img_url) -> str:
         return img_url.split('/')[-2]
 
