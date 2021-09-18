@@ -42,7 +42,7 @@ class Scraper:
         return self.login_session.cookies
 
     def login(self, email, password) -> None:
-        log.debug("Logging in as {0}".format(email))
+        log.debug("Logging in as: {0}".format(email))
         params = {
             self.CSRF_NAME: self.login_csrf,
             'next_url': '/web/',
@@ -53,6 +53,11 @@ class Scraper:
                           data=params,
                           cookies=self.cookies,
                           headers=self.headers)
+
+        if self.is_login:
+            log.info('Log in successful: {0}'.format(email))
+        else:
+            log.error('Log in failed: {0}'.format(email))
 
     @property
     def is_login(self) -> bool:
@@ -79,9 +84,10 @@ class Scraper:
     def get_episode_list(self, url):
         try:
             if 'episodes' not in url:
-                log.error('Invalid url - unable to fetch all episode links')
+                log.error('Error encountered: Invalid url, unable to fetch all episode links')
             else:
                 page = self.parse_page(url).find('ul', attrs={'id':'js_episodeList'})
+                log.debug('Parsing episode list from {0}'.format(url))
                 series_id = url.split('/')[-2]
                 episode_title = [title.text for title in page.findAll('h2')]
                 episode_link = ["https://piccoma.com/web/viewer/{0}/{1}".format(series_id, episode_id['data-episode_id'])
@@ -90,11 +96,16 @@ class Scraper:
                 return episodes
 
         except IndexError:
-            log.error('Invalid url - unable to fetch episode list')
+            log.error('Error encountered: Invalid url, unable to fetch episode list')
+
+        except Exception as exception:
+            log.error('Error encountered: {0}'.format(exception))
 
     def get_pdata(self, url) -> dict:
         try:
             page = self.parse_page(url)
+            log.debug('Parsing data from {0}'.format(url))
+
             title = self.safe_filename(page.find('title').text.split("｜")[1])
             script = page.findAll('script')[5]
 
@@ -111,7 +122,10 @@ class Scraper:
             return pdata
 
         except IndexError:
-            log.error('Invalid url - unable to fetch page data')
+            log.error('Error encountered: Unable to fetch page data')
+
+        except Exception as exception:
+            log.error('Error encountered: {0}'.format(exception))        
 
     def get_image(self, episode, seed, output) -> None:
         try:
@@ -130,18 +144,27 @@ class Scraper:
             else:
                 log.error('Failed to download: {0}'.format(episode))
 
-        except Exception as exception:
-            log.error('<{0}.png> Encountered error: {1}'.format(output, exception))
+        except Exception:
+            log.error('Error encountered on {0}: Failed to write {1}.png'.format(episode, output))
 
     def fetch(self, url, path='extract') -> None:
         try:
             pdata = self.get_pdata(url)
-            if "ログイン" in pdata['title']:
-                log.error('Login required - unable to fetch episode')
-
+            if not self.is_login and not pdata:
+                log.error('Error encountered: Login required, unable to fetch episode')
+            elif not self.is_login and pdata:
+                log.warning('No login session detected, downloading as guest')
+            elif self.login and not pdata:
+                log.error('Error encountered: Coins required for access')
             else:
-                leaf_path = pdata['title'] + "/" + pdata['ep_title'] + "/"
+                leaf_path = '{0}/{1}/'.format(pdata['title'], pdata['ep_title'])
                 dest_path = os.path.join(path, leaf_path)
+
+                if os.path.exists(dest_path):
+                    log.warning('Path already exists: {0}'.format(dest_path))
+                else:
+                    log.debug('Creating path: {0}'.format(dest_path))
+
                 os.makedirs(dest_path, exist_ok=True)
 
                 episode = pdata['img']
@@ -163,5 +186,8 @@ class Scraper:
                 exec_time = time.time() - start_time
                 log.debug('Total elapsed time: {0}'.format(exec_time))
 
+        except TypeError:
+            log.error('Error encountered: Unable to fetch episode')
+
         except Exception as exception:
-            log.error('Encountered error: {0}'.format(exception))
+            log.error('Error encountered: {0}'.format(exception))
