@@ -70,6 +70,21 @@ class Scraper:
         pattern = re.compile(r'[?"|:<>*/\\]', flags=re.VERBOSE)
         return pattern.sub("", str(title))
 
+    @staticmethod
+    def create_path(path, dest_path=None) -> None:
+        if path:
+            if not os.path.isabs(path):
+                path = os.path.join(os.getcwd(), path)
+        else:
+            path = os.path.join(os.getcwd(), 'extract')
+
+        if os.path.exists(dest_path):
+            log.warning('Path already exists: {0}'.format(dest_path))
+        else:
+            log.debug('Creating path: {0}'.format(dest_path))
+
+        os.makedirs(dest_path, exist_ok=True)
+
     def get_checksum(self, img_url) -> str:
         return img_url.split('/')[-2]
 
@@ -81,7 +96,7 @@ class Scraper:
             if int(num) != 0: checksum = checksum[-int(num):] + checksum[:len(checksum)-int(num)]
         return checksum
 
-    def get_episode_list(self, url):
+    def get_episode_list(self, url) -> dict:
         try:
             if 'episodes' not in url:
                 log.error('Error encountered: Invalid url, unable to fetch all episode links')
@@ -125,7 +140,7 @@ class Scraper:
             log.error('Error encountered: Unable to fetch page data')
 
         except Exception as exception:
-            log.error('Error encountered: {0}'.format(exception))        
+            log.error('Error encountered: {0}'.format(exception))
 
     def get_image(self, episode, seed, output) -> None:
         try:
@@ -147,7 +162,7 @@ class Scraper:
         except Exception:
             log.error('Error encountered on {0}: Failed to write {1}.png'.format(episode, output))
 
-    def fetch(self, url, path='extract') -> None:
+    def fetch(self, url, path) -> None:
         try:
             pdata = self.get_pdata(url)
             if not self.is_login and not pdata:
@@ -159,13 +174,7 @@ class Scraper:
             else:
                 leaf_path = '{0}/{1}/'.format(pdata['title'], pdata['ep_title'])
                 dest_path = os.path.join(path, leaf_path)
-
-                if os.path.exists(dest_path):
-                    log.warning('Path already exists: {0}'.format(dest_path))
-                else:
-                    log.debug('Creating path: {0}'.format(dest_path))
-
-                os.makedirs(dest_path, exist_ok=True)
+                self.create_path(path, dest_path)
 
                 episode = pdata['img']
                 checksum = self.get_checksum(episode[0])
