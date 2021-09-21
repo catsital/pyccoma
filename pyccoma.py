@@ -55,9 +55,9 @@ class Scraper:
                           headers=self.headers)
 
         if self.is_login:
-            log.info('Log in successful: {0}'.format(email))
+            log.info('Login successful: {0}'.format(email))
         else:
-            log.error('Log in failed: {0}'.format(email))
+            log.error('Login failed: {0}'.format(email))
 
     @property
     def is_login(self) -> bool:
@@ -166,11 +166,11 @@ class Scraper:
         try:
             pdata = self.get_pdata(url)
             if not self.is_login and not pdata:
-                log.error('Error encountered: Login required, unable to fetch episode')
+                log.error('Restricted content: Login required')
+            elif self.is_login and not pdata:
+                log.error('Restricted content: Coins required for access')
             elif not self.is_login and pdata:
                 log.warning('No login session detected, downloading as guest')
-            elif self.login and not pdata:
-                log.error('Error encountered: Coins required for access')
             else:
                 leaf_path = '{0}/{1}/'.format(pdata['title'], pdata['ep_title'])
                 dest_path = os.path.join(path, leaf_path)
