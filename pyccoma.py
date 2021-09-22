@@ -30,40 +30,48 @@ class Scraper:
         return soup
 
     @property
-    def login_session(self):
-        return self.session.get(self.login_url, headers=self.headers)
+    def _login(self) -> dict:
+        session = self.session.get(self.login_url, headers=self.headers)
+        page = self.parse(session.text)
+        csrf = page.find('input', attrs={'name': self.CSRF_NAME})['value']
+        cookies = session.cookies
+        is_login = str(page.findAll('script')[3]).split('login')[1].split(":")[1].split(",")[0].strip().title()
+        login = {
+            'csrf': csrf,
+            'cookies': cookies,
+            'is_login': eval(is_login)
+        }
+        return login
 
     @property
-    def login_csrf(self) -> str:
-        return self.parse(self.login_session.text).find('input', attrs={'name': self.CSRF_NAME})['value']
+    def _login_csrf(self) -> str:
+        return self._login['csrf']
 
     @property
-    def cookies(self) -> str:
-        return self.login_session.cookies
+    def _login_cookies(self) -> str:
+        return self._login['cookies']
+
+    @property
+    def _is_login(self) -> bool:
+        return self._login['is_login']
 
     def login(self, email, password) -> None:
         log.debug("Logging in as: {0}".format(email))
         params = {
-            self.CSRF_NAME: self.login_csrf,
+            self.CSRF_NAME: self._login_csrf,
             'next_url': '/web/',
             'email': email,
             'password': password
         }
         self.session.post(self.login_url,
                           data=params,
-                          cookies=self.cookies,
+                          cookies=self._login_cookies,
                           headers=self.headers)
 
-        if self.is_login:
+        if self._is_login:
             log.info('Login successful: {0}'.format(email))
         else:
             log.error('Login failed: {0}'.format(email))
-
-    @property
-    def is_login(self) -> bool:
-        soup = self.parse(self.login_session.text).findAll('script')[3]
-        login = str(soup).split('login')[1].split(":")[1].split(",")[0].strip().title()
-        return eval(login)
 
     @staticmethod
     def safe_filename(title) -> str:
@@ -165,11 +173,11 @@ class Scraper:
     def fetch(self, url, path) -> None:
         try:
             pdata = self.get_pdata(url)
-            if not self.is_login and not pdata:
+            if not self._is_login and not pdata:
                 log.error('Restricted content: Login required')
-            elif self.is_login and not pdata:
+            elif self._is_login and not pdata:
                 log.error('Restricted content: Coins required for access')
-            elif not self.is_login and pdata:
+            elif not self._is_login and pdata:
                 log.warning('No login session detected, downloading as guest')
             else:
                 leaf_path = '{0}/{1}/'.format(pdata['title'], pdata['ep_title'])
