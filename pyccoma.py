@@ -4,7 +4,8 @@ import time
 import logging
 import requests
 import threading
-from pycasso import UnscrambleImg as pyc
+
+from pycasso import Canvas
 from bs4 import BeautifulSoup as bs
 
 log = logging.getLogger(__name__)
@@ -155,8 +156,7 @@ class Scraper:
             img = requests.get(episode, headers=self.headers, stream=True)
             if img.status_code == 200:
                 if seed.isupper():
-                    canvas = pyc(img.raw, 50, seed, output)
-                    canvas.unscramble()
+                    Canvas(img.raw, 50, seed, output).export()
                 else:
                     with open(output + '.png', 'wb') as handler:
                         for chunk in img.iter_content(1024):
