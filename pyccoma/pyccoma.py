@@ -1,18 +1,25 @@
 import os
 import re
-import time
+import sys
+import shutil
 import logging
 import requests
 import threading
 
 from pycasso import Canvas
+
 from bs4 import BeautifulSoup as bs
+from time import time, gmtime, strftime
 
 log = logging.getLogger(__name__)
 
 class Scraper:
     CSRF_NAME = 'csrfmiddlewaretoken'
-    login_url = 'https://piccoma.com/web/acc/email/signin'
+    base_url = 'https://piccoma.com'
+    login_url = base_url + '/web/acc/email/signin'
+    history_url = base_url + '/web/bookshelf/history'
+    bookmark_url = base_url + '/web/bookshelf/bookmark'
+    purchase_url = base_url + '/web/bookshelf/purchase'
 
     def __init__(self):
         self.headers = {
@@ -21,13 +28,14 @@ class Scraper:
         }
         self.session = requests.session()
         self.session.verify = True
+        self._lock = threading.Lock()
 
     def parse(self, page) -> str:
         return bs(page, 'html.parser')
 
     def parse_page(self, url) -> str:
-        page = self.session.get(url, headers=self.headers).text
-        soup = self.parse(page)
+        page = self.session.get(url, headers=self.headers)
+        soup = self.parse(page.text)
         return soup
 
     @property
@@ -116,7 +124,15 @@ class Scraper:
                 episode_title = [title.text for title in page.findAll('h2')]
                 episode_link = ["https://piccoma.com/web/viewer/{0}/{1}".format(series_id, episode_id['data-episode_id'])
                                 for episode_id in page.select('a[data-episode_id]')]
-                episodes = {title:link for title, link in zip(episode_title, episode_link)}
+                status = page.findAll('div', attrs={'class':'PCM-epList_status'})
+
+                episodes = {title:{'url': link,
+                                   'is_free': True if 'status_free' in str(_status) else False,
+                                   'is_free_read':  True if 'status_waitfreeRead' in str(_status) else False,
+                                   'is_wait_free': True if 'status_webwaitfree' in str(_status) else False,
+                                   'is_purchased': True if 'status_buy' in str(_status) else False}
+                            for title, link, _status in zip(episode_title, episode_link, status)}
+
                 return episodes
 
         except IndexError:
@@ -124,6 +140,22 @@ class Scraper:
 
         except Exception as exception:
             log.error('Error encountered: {0}'.format(exception))
+
+    def get_history(self) -> dict:
+        return self.get_bdata(self.history_url)
+
+    def get_bookmark(self) -> dict:
+        return self.get_bdata(self.bookmark_url)
+
+    def get_purchase(self) -> dict:
+        return self.get_bdata(self.purchase_url)
+
+    def get_bdata(self, url) -> dict:
+        page = self.parse_page(url).find('section', attrs={'class':'PCM-productTile'})
+        product_title = [title.text for title in page.select('span') if title.text]
+        product_link = [self.base_url + url.attrs['href'] + "/episodes" for url in page.select('a', href=True, attrs={'class':'PCM-product'})]
+        items = {title:link for title, link in zip(product_title, product_link)}
+        return items
 
     def get_pdata(self, url) -> dict:
         try:
@@ -146,14 +178,15 @@ class Scraper:
             return pdata
 
         except IndexError:
-            log.error('Error encountered: Unable to fetch page data')
+            log.error('Error encountered: Unable to fetch page data on {0}'.format(url))
 
         except Exception as exception:
             log.error('Error encountered: {0}'.format(exception))
 
     def get_image(self, episode, seed, output) -> None:
         try:
-            img = requests.get(episode, headers=self.headers, stream=True)
+            with self._lock:
+                img = requests.get(episode, headers=self.headers, stream=True)
             if img.status_code == 200:
                 if seed.isupper():
                     Canvas(img.raw, 50, seed, output).export()
@@ -173,6 +206,8 @@ class Scraper:
     def fetch(self, url, path) -> None:
         try:
             pdata = self.get_pdata(url)
+            sys.stdout.write(f"\nTitle: {pdata['title']}\nEpisode: {pdata['ep_title']}\n")
+
             if not self._is_login and not pdata:
                 log.error('Restricted content: Login required')
             elif self._is_login and not pdata:
@@ -184,27 +219,47 @@ class Scraper:
                 dest_path = os.path.join(path, leaf_path)
                 self.create_path(path, dest_path)
 
+                count = 0
                 episode = pdata['img']
+                episode_size = len(episode)
                 checksum = self.get_checksum(episode[0])
                 key = self.get_key(episode[0])
                 seed = self.get_seed(checksum, key)
 
-                start_time = time.time()
+                start_time = time()
 
                 for page_num, page in enumerate(episode):
                     output = dest_path + str(page_num+1)
                     if os.path.exists(output + ".png"):
-                        log.warning('Skipping download, file already exists: {0}.png'.format(output))
+                        log.info('Skipping download, file already exists: {0}.png'.format(output))
                     else:
                         download = threading.Thread(target=self.get_image, args=(page, seed, output))
                         download.start()
-                        time.sleep(1)
+                    with self._lock:
+                        count += 1
+                        self.display_progress_bar(count, episode_size)
 
-                exec_time = time.time() - start_time
-                log.debug('Total elapsed time: {0}'.format(exec_time))
+                with self._lock:
+                    exec_time = strftime("%H:%M:%S", gmtime(time() - start_time))
+                    sys.stdout.write(f"\nElapsed time: {exec_time}\n")
+                    sys.stdout.flush()
 
         except TypeError:
             log.error('Error encountered: Unable to fetch episode')
 
         except Exception as exception:
             log.error('Error encountered: {0}'.format(exception))
+
+    """Based on pytube progress bar implementation:
+       https://github.com/pytube/pytube/blob/master/pytube/cli.py#L209
+    """
+    @staticmethod
+    def display_progress_bar(file_count, total_count, char="█", scale=0.55) -> None:
+        columns = shutil.get_terminal_size().columns
+        max_width = int(columns * scale)
+        filled = int(round(max_width * file_count / float(total_count)))
+        remaining = max_width - filled
+        progress_bar = char * filled + " " * remaining
+        percent = round(100.0 * file_count / float(total_count), 1)
+        text = f"|{progress_bar}| {percent}%\r"
+        sys.stdout.write(text)
