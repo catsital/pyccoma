@@ -34,9 +34,13 @@ class Scraper:
         return bs(page, 'html.parser')
 
     def parse_page(self, url) -> str:
-        page = self.session.get(url, headers=self.headers)
-        soup = self.parse(page.text)
-        return soup
+        try:
+            page = self.session.get(url, headers=self.headers)
+            soup = self.parse(page.text)
+            return soup
+
+        except Exception:
+            log.error('Error encountered: Failed to parse page')
 
     @property
     def _login(self) -> dict:
@@ -65,22 +69,27 @@ class Scraper:
         return self._login['is_login']
 
     def login(self, email, password) -> None:
-        log.debug("Logging in as: {0}".format(email))
-        params = {
-            self.CSRF_NAME: self._login_csrf,
-            'next_url': '/web/',
-            'email': email,
-            'password': password
-        }
-        self.session.post(self.login_url,
-                          data=params,
-                          cookies=self._login_cookies,
-                          headers=self.headers)
+        try:
+            log.debug("Logging in as: {0}".format(email))
+            params = {
+                self.CSRF_NAME: self._login_csrf,
+                'next_url': '/web/',
+                'email': email,
+                'password': password
+            }
+            self.session.post(self.login_url,
+                              data=params,
+                              cookies=self._login_cookies,
+                              headers=self.headers)
 
-        if self._is_login:
-            log.info('Login successful: {0}'.format(email))
-        else:
-            log.error('Login failed: {0}'.format(email))
+            if self._is_login:
+                log.info('Login successful: {0}'.format(email))
+            else:
+                log.error('Login failed: {0}'.format(email))
+
+        except Exception:
+            log.error('Error encountered: failed to establish connection to server')
+            raise SystemExit
 
     @staticmethod
     def safe_filename(title) -> str:
@@ -124,11 +133,12 @@ class Scraper:
                 episode_title = [title.text for title in page.findAll('h2')]
                 episode_link = ["https://piccoma.com/web/viewer/{0}/{1}".format(series_id, episode_id['data-episode_id'])
                                 for episode_id in page.select('a[data-episode_id]')]
-                status = page.findAll('div', attrs={'class':'PCM-epList_status'})
+                status = page.findAll('li', attrs={'class':'PCM-product_episodeList'})
 
                 episodes = {title:{'url': link,
                                    'is_free': True if 'status_free' in str(_status) else False,
                                    'is_free_read':  True if 'status_waitfreeRead' in str(_status) else False,
+                                   'is_read': True if 'PCM-epList_read' in str(_status) else False,
                                    'is_wait_free': True if 'status_webwaitfree' in str(_status) else False,
                                    'is_purchased': True if 'status_buy' in str(_status) else False}
                             for title, link, _status in zip(episode_title, episode_link, status)}
@@ -212,8 +222,6 @@ class Scraper:
                 log.error('Restricted content: Login required')
             elif self._is_login and not pdata:
                 log.error('Restricted content: Coins required for access')
-            elif not self._is_login and pdata:
-                log.warning('No login session detected, downloading as guest')
             else:
                 leaf_path = '{0}/{1}/'.format(pdata['title'], pdata['ep_title'])
                 dest_path = os.path.join(path, leaf_path)
