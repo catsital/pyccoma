@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 requirements = [
     "bs4==0.0.1",
     "requests==2.26.0",
-    "git+https://github.com/catsital/pycasso.git"
+    "pycasso@git+https://github.com/catsital/pycasso.git#egg=pycasso"
     ]
 
 setup(
@@ -27,6 +27,7 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    dependency_links = [ "https://github.com/catsital/pycasso/tarball/main#egg=pycasso-1.0.0" ],
     packages=find_packages(),
     zip_safe=False
 )

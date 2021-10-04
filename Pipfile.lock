@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "590f655aa8d78ef371d2c8265c8a87a8f130b2a37f469b2c94bb0424b9fac5e2"
+            "sha256": "f418ff563d230079dcf778558aa0b4d9714b159f5bfdd2526a073bab180cfab0"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -114,9 +114,8 @@
             "version": "==8.3.2"
         },
         "pycasso": {
-            "editable": true,
-            "git": "https://github.com/catsital/pycasso",
-            "ref": "b6a7f1dd3c1b702e4d5faa0676a8dad41b8e8340"
+            "git": "https://github.com/catsital/pycasso.git",
+            "ref": "6d393e423545b592bd334d4e149b19abcdf308d6"
         },
         "requests": {
             "hashes": [

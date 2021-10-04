@@ -6,7 +6,7 @@ name = "pypi"
 [packages]
 bs4 = "*"
 requests = "*"
-pycasso = {editable = true, git = "https://github.com/catsital/pycasso"}
+pycasso = {ref = "develop", git = "https://github.com/catsital/pycasso.git"}
 
 [dev-packages]
 
