@@ -11,7 +11,7 @@ requirements = [
 
 setup(
     name="pyccoma",
-    version="0.1.0",
+    version="0.1.1",
     author="catsital",
     author_email="catshital@gmail.com",
     description="Scrape and download manga from Piccoma.",
@@ -27,7 +27,7 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    dependency_links = [ "https://github.com/catsital/pycasso/tarball/main#egg=pycasso-1.0.0" ],
+    dependency_links = [ "https://github.com/catsital/pycasso/tarball/main#egg=pycasso-1.1.0" ],
     packages=find_packages(),
     zip_safe=False
 )

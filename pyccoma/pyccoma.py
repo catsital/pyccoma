@@ -8,8 +8,12 @@ import threading
 
 from pycasso import Canvas
 
+from functools import lru_cache
+from typing import Optional, List
 from bs4 import BeautifulSoup as bs
 from time import time, gmtime, strftime
+
+from pyccoma.helpers import create_path, safe_filename
 
 log = logging.getLogger(__name__)
 
@@ -28,12 +32,48 @@ class Scraper:
         }
         self.session = requests.session()
         self.session.verify = True
+        self.__is_login = False
         self._lock = threading.Lock()
+        self._etype = { 'manga': 'V', 'webtoon': 'E' }
+        self._format = 'png'
 
-    def parse(self, page) -> str:
+    @property
+    def manga(self) -> str:
+        return self._etype['manga']
+
+    @property
+    def webtoon(self) -> str:
+        return self._etype['webtoon']
+
+    @property
+    def format(self) -> str:
+        return self._format
+
+    @manga.setter
+    def manga(self, value: str) -> None:
+        if value in ('V', 'E'):
+            self._etype['manga'] = value.upper()
+        else:
+            log.error("Invalid type.")
+
+    @webtoon.setter
+    def webtoon(self, value: str) -> None:
+        if value in ('V', 'E'):
+            self._etype['webtoon'] = value.upper()
+        else:
+            log.error("Invalid type.")
+
+    @format.setter
+    def format(self, value: str) -> None:
+        if value in ('png', 'jpg', 'bmp', 'jpeg'):
+            self._format = value.lower()
+        else:
+            log.error("Invalid format.")
+
+    def parse(self, page: str) -> str:
         return bs(page, 'html.parser')
 
-    def parse_page(self, url) -> str:
+    def parse_page(self, url: str) -> str:
         try:
             page = self.session.get(url, headers=self.headers)
             soup = self.parse(page.text)
@@ -42,89 +82,62 @@ class Scraper:
         except Exception:
             log.error('Error encountered: Failed to parse page')
 
-    @property
-    def _login(self) -> dict:
-        session = self.session.get(self.login_url, headers=self.headers)
-        page = self.parse(session.text)
-        csrf = page.find('input', attrs={'name': self.CSRF_NAME})['value']
-        cookies = session.cookies
+    def get_login_status(self) -> bool:
+        page = self.parse_page(self.login_url)
         is_login = str(page.findAll('script')[3]).split('login')[1].split(":")[1].split(",")[0].strip().title()
-        login = {
-            'csrf': csrf,
-            'cookies': cookies,
-            'is_login': eval(is_login)
-        }
-        return login
+        return eval(is_login)
 
     @property
-    def _login_csrf(self) -> str:
-        return self._login['csrf']
+    def is_login(self) -> bool:
+        return self.__is_login
 
-    @property
-    def _login_cookies(self) -> str:
-        return self._login['cookies']
+    @is_login.setter
+    def is_login(self, value: str) -> None:
+        if type(value) is bool:
+            self.__is_login = value
 
-    @property
-    def _is_login(self) -> bool:
-        return self._login['is_login']
-
-    def login(self, email, password) -> None:
+    def login(self, email: str, password: str) -> None:
         try:
             log.debug("Logging in as: {0}".format(email))
+            session = self.session.get(self.login_url, headers=self.headers)
+            csrf = self.parse(session.text).find('input', attrs={'name': self.CSRF_NAME})['value']
+
             params = {
-                self.CSRF_NAME: self._login_csrf,
+                self.CSRF_NAME: csrf,
                 'next_url': '/web/',
                 'email': email,
                 'password': password
             }
             self.session.post(self.login_url,
                               data=params,
-                              cookies=self._login_cookies,
+                              cookies=session.cookies,
                               headers=self.headers)
 
-            if self._is_login:
-                log.info('Login successful: {0}'.format(email))
+            if self.get_login_status():
+                self.is_login = True
+                log.info("Successfully logged in: {0}".format(email))
             else:
-                log.error('Login failed: {0}'.format(email))
+                self.is_login = False
+                log.error("Failed to log in: {0}".format(email))
 
         except Exception:
             log.error('Error encountered: failed to establish connection to server')
             raise SystemExit
 
-    @staticmethod
-    def safe_filename(title) -> str:
-        pattern = re.compile(r'[?"|:<>*/\\]', flags=re.VERBOSE)
-        return pattern.sub("", str(title))
-
-    @staticmethod
-    def create_path(path, dest_path=None) -> None:
-        if path:
-            if not os.path.isabs(path):
-                path = os.path.join(os.getcwd(), path)
-        else:
-            path = os.path.join(os.getcwd(), 'extract')
-
-        if os.path.exists(dest_path):
-            log.warning('Path already exists: {0}'.format(dest_path))
-        else:
-            log.debug('Creating path: {0}'.format(dest_path))
-
-        os.makedirs(dest_path, exist_ok=True)
-
-    def get_checksum(self, img_url) -> str:
+    def get_checksum(self, img_url: str) -> str:
         return img_url.split('/')[-2]
 
-    def get_key(self, img_url) -> str:
+    def get_key(self, img_url: str) -> str:
         return img_url.split('?')[1].split('&')[1].split('=')[1]
 
-    def get_seed(self, checksum, expiry_key) -> str:
+    def get_seed(self, checksum: str, expiry_key: int) -> str:
         for num in expiry_key:
             if int(num) != 0: checksum = checksum[-int(num):] + checksum[:len(checksum)-int(num)]
         return checksum
 
-    def get_episode_list(self, url) -> dict:
+    def get_episode_list(self, url: str) -> dict:
         try:
-            if 'episodes' not in url:
+            if 'episodes?etype=E' not in url:
                 log.error('Error encountered: Invalid url, unable to fetch all episode links')
             else:
                 page = self.parse_page(url).find('ul', attrs={'id':'js_episodeList'})
@@ -137,7 +150,7 @@ class Scraper:
 
                 episodes = {title:{'url': link,
                                    'is_free': True if 'status_free' in str(_status) else False,
-                                   'is_free_read':  True if 'status_waitfreeRead' in str(_status) else False,
+                                   'is_free_read': True if 'status_waitfreeRead' in str(_status) else False,
                                    'is_read': True if 'PCM-epList_read' in str(_status) else False,
                                    'is_wait_free': True if 'status_webwaitfree' in str(_status) else False,
                                    'is_purchased': True if 'status_buy' in str(_status) else False}
@@ -151,57 +164,95 @@ class Scraper:
         except Exception as exception:
             log.error('Error encountered: {0}'.format(exception))
 
-    def get_history(self) -> dict:
-        return self.get_bdata(self.history_url)
-
-    def get_bookmark(self) -> dict:
-        return self.get_bdata(self.bookmark_url)
-
-    def get_purchase(self) -> dict:
-        return self.get_bdata(self.purchase_url)
-
-    def get_bdata(self, url) -> dict:
-        page = self.parse_page(url).find('section', attrs={'class':'PCM-productTile'})
-        product_title = [title.text for title in page.select('span') if title.text]
-        product_link = [self.base_url + url.attrs['href'] + "/episodes" for url in page.select('a', href=True, attrs={'class':'PCM-product'})]
-        items = {title:link for title, link in zip(product_title, product_link)}
-        return items
-
-    def get_pdata(self, url) -> dict:
+    def get_volume_list(self, url: str) -> dict:
         try:
-            page = self.parse_page(url)
-            log.debug('Parsing data from {0}'.format(url))
+            if 'episodes?etype=V' not in url:
+                log.error('Error encountered: Invalid url, unable to fetch all volume links')
+            else:
+                page = self.parse_page(url).find('ul', attrs={'id':'js_volumeList'})
+                log.debug('Parsing volume list from {0}'.format(url))
+                series_id = url.split('/')[-2]
+                volume_title = [title.text for title in page.findAll('h2')]
+                volume_link = [["https://piccoma.com/web/viewer/{0}/{1}".format(series_id, volume_id['data-episode_id'])
+                                for volume_id in links.select('a[data-episode_id]')]
+                                for links in page.findAll('div', attrs={'class':'PCM-prdVol_btns'})]
+                status = page.findAll('li', attrs={'class':'PCM-prdVol'})
 
-            title = self.safe_filename(page.find('title').text.split("｜")[1])
-            script = page.findAll('script')[5]
+                volumes = {title:{'url': link,
+                                   'is_free': True if 'status_free' in str(_status) else False,
+                                   'is_free_read': True if 'status_waitfreeRead' in str(_status) else False,
+                                   'is_read': True if 'PCM-volList_read' in str(_status) else False,
+                                   'is_wait_free': True if 'status_webwaitfree' in str(_status) else False,
+                                   'is_purchased': True if '読む' in str(_status) else False}
+                            for title, link, _status in zip(volume_title, volume_link, status)}
 
-            ep_title = str(script).split('title')[1].split("'")[2].strip()
-            is_scrambled = str(script).split('isScrambled')[1].split(":")[1].split(",")[0].strip().title()
-            links = str(script).split("'img'")[1]
-            images = ["https://" + image.split("',")[0].strip() for image in links.split("{'path':'//") if "'," in image]
-            pdata = {
-                'title': title,
-                'ep_title': ep_title,
-                'is_scrambled': eval(is_scrambled),
-                'img': images
-            }
-            return pdata
+                return volumes
 
         except IndexError:
-            log.error('Error encountered: Unable to fetch page data on {0}'.format(url))
+            log.error('Error encountered: Invalid url, unable to fetch volume list')
 
         except Exception as exception:
             log.error('Error encountered: {0}'.format(exception))
 
-    def get_image(self, episode, seed, output) -> None:
+    @lru_cache
+    def get_history(self) -> dict:
+        return self.get_bdata(self.history_url)
+
+    @lru_cache
+    def get_bookmark(self) -> dict:
+        return self.get_bdata(self.bookmark_url)
+
+    @lru_cache
+    def get_purchase(self) -> dict:
+        return self.get_bdata(self.purchase_url)
+
+    def get_bdata(self, url: str) -> dict:
+        page = self.parse_page(url).find('section', attrs={'class':'PCM-productTile'})
+        product_title = [title.text for title in page.select('span') if title.text]
+        product_type = [self.webtoon if 'PCM-stt_smartoon' in str(_type) else self.manga
+                        for _type in [type for type in page.findAll('li', attrs={'class':'PCM-slotProducts_list'})]]
+        product_link = [self.base_url + url.attrs['href'] + "/episodes?etype="
+                        for url in page.select('a', href=True, attrs={'class':'PCM-product'})]
+        items = {title:link+type for title, link, type in zip(product_title, product_link, product_type)}
+        return items
+
+    def get_pdata(self, url: str) -> dict:
+        try:
+            if 'viewer' in url:
+                page = self.parse_page(url)
+
+                log.debug('Parsing data from {0}'.format(url))
+
+                title = safe_filename(page.find('title').text.split("｜")[1])
+                script = page.findAll('script')[5]
+
+                ep_title = str(script).split('title')[1].split("'")[2].strip()
+                is_scrambled = str(script).split('isScrambled')[1].split(":")[1].split(",")[0].strip().title()
+                links = str(script).split("'img'")[1]
+                images = ["https://" + image.split("',")[0].strip() for image in links.split("{'path':'//") if "'," in image]
+                pdata = {
+                    'title': title,
+                    'ep_title': ep_title,
+                    'is_scrambled': eval(is_scrambled),
+                    'img': images
+                }
+                return pdata
+
+            else:
+                log.error('Error encountered: Invalid url, unable to fetch page data')
+
+        except Exception:
+            log.error('Error encountered: Unable to fetch page data on {0}'.format(url))
+
+    def get_image(self, img_url: str, seed: str, output: str) -> None:
         try:
             with self._lock:
-                img = requests.get(episode, headers=self.headers, stream=True)
+                img = requests.get(img_url, headers=self.headers, stream=True)
             if img.status_code == 200:
                 if seed.isupper():
-                    Canvas(img.raw, 50, seed, output).export()
+                    Canvas(img.raw, 50, seed).export(path=output)
                 else:
-                    with open(output + '.png', 'wb') as handler:
+                    with open(output, 'wb') as handler:
                         for chunk in img.iter_content(1024):
                             if chunk:
                                 handler.write(chunk)
@@ -211,41 +262,27 @@ class Scraper:
                 log.error('Failed to download: {0}'.format(episode))
 
         except Exception:
-            log.error('Error encountered on {0}: Failed to write {1}.png'.format(episode, output))
+            log.error('Error encountered on {0}: Failed to write {1}'.format(episode, output))
 
-    def fetch(self, url, path) -> None:
+    def fetch(self, url: str, path: Optional[str] = None) -> None:
         try:
             pdata = self.get_pdata(url)
-            sys.stdout.write(f"\nTitle: {pdata['title']}\nEpisode: {pdata['ep_title']}\n")
-
-            if not self._is_login and not pdata:
+            if not pdata and not self.is_login:
                 log.error('Restricted content: Login required')
-            elif self._is_login and not pdata:
+            elif not pdata and self.is_login:
                 log.error('Restricted content: Coins required for access')
             else:
-                leaf_path = '{0}/{1}/'.format(pdata['title'], pdata['ep_title'])
-                dest_path = os.path.join(path, leaf_path)
-                self.create_path(path, dest_path)
+                sys.stdout.write(f"\nTitle: {pdata['title']}\nEpisode: {pdata['ep_title']}\n")
 
-                count = 0
-                episode = pdata['img']
-                episode_size = len(episode)
-                checksum = self.get_checksum(episode[0])
-                key = self.get_key(episode[0])
-                seed = self.get_seed(checksum, key)
+                if not path:
+                    path = os.path.join(os.getcwd(), 'extract')
+
+                tail_path = '{0}/{1}/'.format(pdata['title'], pdata['ep_title'])
+                head_path = os.path.join(path, tail_path)
+                dest_path = create_path(head_path)
 
                 start_time = time()
-
-                for page_num, page in enumerate(episode):
-                    output = dest_path + str(page_num+1)
-                    if os.path.exists(output + ".png"):
-                        log.info('Skipping download, file already exists: {0}.png'.format(output))
-                    else:
-                        download = threading.Thread(target=self.get_image, args=(page, seed, output))
-                        download.start()
-                    with self._lock:
-                        count += 1
-                        self.display_progress_bar(count, episode_size)
+                self._fetch(pdata['img'], dest_path)
 
                 with self._lock:
                     exec_time = strftime("%H:%M:%S", gmtime(time() - start_time))
@@ -258,11 +295,33 @@ class Scraper:
         except Exception as exception:
             log.error('Error encountered: {0}'.format(exception))
 
+        except KeyboardInterrupt:
+            pass
+
+    def _fetch(self, episode: List, path: str) -> None:
+        count = 0
+        episode_size = len(episode)
+        checksum = self.get_checksum(episode[0])
+        key = self.get_key(episode[0])
+        seed = self.get_seed(checksum, key)
+
+        for page, url in enumerate(episode):
+            output = os.path.join(path, f"{page + 1}.{self.format}")
+
+            if os.path.exists(output):
+                log.debug('Skipping download, file already exists: {0}'.format(output))
+            else:
+                download = threading.Thread(target=self.get_image, args=(url, seed, output))
+                download.start()
+            with self._lock:
+                count += 1
+                self.display_progress_bar(count, episode_size)
+
     """Based on pytube progress bar implementation:
        https://github.com/pytube/pytube/blob/master/pytube/cli.py#L209
     """
     @staticmethod
-    def display_progress_bar(file_count, total_count, char="█", scale=0.55) -> None:
+    def display_progress_bar(file_count: int, total_count: int, char: str = "█", scale: float = 0.55) -> None:
         columns = shutil.get_terminal_size().columns
         max_width = int(columns * scale)
         filled = int(round(max_width * file_count / float(total_count)))
