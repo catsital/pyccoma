@@ -20,3 +20,32 @@ def create_path(path: str) -> str:
 
     os.makedirs(path, exist_ok=True)
     return path
+
+def create_tags(text: str) -> str:
+    identifiers = [
+        r'is_limited_read',
+        r"is_limited_free",
+        r"is_already_read",
+        r"is_free",
+        r"is_purchased",
+    ]
+    identifiers = "|".join(identifiers)
+    pattern = r'(\b' + identifiers + r')\b(\s*(' + identifiers + r')\b)*'
+
+    regex = re.compile(pattern, re.I)
+    tags = regex.sub(r"episode['\1']", text.strip('"'))
+    return tags
+
+def trunc_title(title: str) -> str:
+    return re.sub(r'\([^)]*\)', '', title)
+
+def valid_url(url: str) -> bool:
+    base_url = r'(http|https)://(|www.)piccoma.com/web'
+    urls = [
+        base_url + r'/product/([0-9\-]+)/episodes\?etype\=([eE|vV]+)',
+        base_url + r'/viewer/(|s/)([0-9]+)/([0-9]+)',
+        base_url + r'/bookshelf/|(bookmark|history|purchase)'
+    ]
+    urls = "|".join(urls)
+    regex = re.search(urls, url)
+    return bool(regex)

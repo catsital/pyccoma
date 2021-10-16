@@ -1,0 +1,5 @@
+base_url = 'https://piccoma.com'
+login_url = base_url + '/web/acc/email/signin'
+history_url = base_url + '/web/bookshelf/history'
+bookmark_url = base_url + '/web/bookshelf/bookmark'
+purchase_url = base_url + '/web/bookshelf/purchase'
