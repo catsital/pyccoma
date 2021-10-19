@@ -9,9 +9,27 @@ Directly scrape images from [Piccoma](https://piccoma.com).
 
 * First, you should get a copy of this project in your local machine by either downloading the zip file or cloning the repository. `git clone https://github.com/catsital/pyccoma.git`
 * `cd` into `pyccoma` directory.
-* Run `python setup.py install --user` to install package.
+* Run `python setup.py install` to install package.
 
 ## Quickstart
+
+### Using the command-line utility
+
+To download a single episode, simply use:
+
+```bash
+$ pyccoma https://piccoma.com/web/viewer/8195/1185884
+```
+
+You can also pass multiple links (separated by whitespace) to download in one go:
+
+```bash
+$ pyccoma https://piccoma.com/web/viewer/60171/1575237 https://piccoma.com/web/viewer/5796/332058 https://piccoma.com/web/viewer/13034/623225
+```
+
+See more examples on how to aggregate and batch download using the command-line utility on [the next section]('#usage') below.
+
+### Using Python shell
 
 Create a `Scraper` instance and use `fetch` to scrape and download images from a viewer page.
 
@@ -22,7 +40,7 @@ Create a `Scraper` instance and use `fetch` to scrape and download images from a
 
 Title: ひげを剃る。そして女子高生を拾う。(しめさば ぶーた 足立いまる)
 Episode: 第1話 失恋と女子高生 (1)
-|███████████████████████████████████████████████████████████| 100.0%
+  |███████████████████████████████████████████████████████████| 100.0% (14/14)
 Elapsed time: 00:00:17
 ```
 
@@ -34,7 +52,7 @@ You can use `login` to have access to rental or paywalled episodes from your own
 
 Title: かぐや様は告らせたい～天才たちの恋愛頭脳戦～(赤坂アカ)
 Episode: 第135話
-|███████████████████████████████████████████████████████████| 100.0%
+  |███████████████████████████████████████████████████████████| 100.0% (20/20)
 Elapsed time: 00:00:23
 ```
 
@@ -52,124 +70,148 @@ Images are stored under the path specified in `fetch(url, path)`. A fixed direct
 
 ## Usage
 
-### Scraping public data
+### Using filter to aggregate and download in batch
 
-#### Using `get_episode_list` to scrape data from a product page:
+* Downloading all free episodes in a single product page:
 
-```python
->>> product_info = pyc.get_episode_list('https://piccoma.com/web/product/12482/episodes')
->>> product_info
-{'第1話 召喚と追放': {'url': 'https://piccoma.com/web/viewer/12482/631201', 'is_free': True, 'is_free_read': False, 'is_read': False, 'is_wait_free': False, 'is_purchased': False}, '第2話 森の魔女と精霊': {'url': 'https://piccoma.com/web/viewer/12482/631205', 'is_free': True, 'is_free_read': False, 'is_read': False, 'is_wait_free': False, 'is_purchased': False}}
+```bash
+$ pyccoma https://piccoma.com/web/product/67171/episodes?etype=E --filter all --include is_free
 ```
 
-`get_episode_list(url)` returns a dictionary of product data which includes the `episode`, `url`, and `status` categorized into `is_free`, `is_free_read`, `is_read`, `is_wait_free`, `is_purchased`. These statuses change accordingly when you are logged in and have accessed the episodes previously.
+* Downloading using custom with range:
 
-```python
->>> pyc.login(email, password)
->>> product_info = pyc.get_episode_list('https://piccoma.com/web/product/12482/episodes')
->>> product_info
-{'第1話 召喚と追放': {'url': 'https://piccoma.com/web/viewer/12482/631201', 'is_free': True, 'is_free_read': False, 'is_read': True, 'is_wait_free': False, 'is_purchased': False}, '第2話 森の魔女と精霊': {'url': 'https://piccoma.com/web/viewer/12482/631205', 'is_free': True, 'is_free_read': False, 'is_read': True, 'is_wait_free': False, 'is_purchased': False}}
+```bash
+$ pyccoma https://piccoma.com/web/product/16070/episodes?etype=E --filter custom --range 1:5
 ```
 
-You can use these statuses to narrow down the results based on your library. See examples on the [next section]('https://github.com/catsital/pyccoma#accessing-your-library').
+* Downloading all free episodes across multiple products:
 
-#### Using `get_pdata` to scrape data from a viewer page:
-
-```python
->>> pdata = pyc.get_pdata('https://piccoma.com/web/viewer/12482/631201')
->>> pdata
-{'title': '復讐を誓った白猫は竜王の膝の上で惰眠をむさぼる(あき クレハ ヤミーゴ)', 'ep_title': '第1話 召喚と追放', 'is_scrambled': True, 'img': ['https://pcm.kakaocdn.net/dna/e9073/btqzu1ySncw/RURZWSY6VAL9Z68AZO0CGJ/i00001.jpg?credential=4ggejDuJPPXMt5QR0LkfXOO2OCuoiXMt&expires=1633262400&signature=xGrL3pG2qXfOHyCbfOo1X6OPWRs%3D', 'https://pcm.kakaocdn.net/dna/bs75HK/btqzxG79lUN/RURZWSY6VAL9Z68AZO0CGJ/i00002.jpg?credential=4ggejDuJPPXMt5QR0LkfXOO2OCuoiXMt&expires=1633262400&signature=xGrL3pG2qXfOHyCbfOo1X6OPWRs%3D']}
+```bash
+$ pyccoma https://piccoma.com/web/product/5523/episodes?etype=E https://piccoma.com/web/product/23019/episodes?etype=E --filter all --include is_free --exclude is_limited_free
 ```
-
-`get_pdata(url)` returns a dictionary of episode data which includes the `title`, `ep_title`, `is_scrambled` status, and a list of `img` links.
 
 ### Accessing your library
 
-#### Getting all the products you have read from your `history`:
+* Downloading all your purchased items:
 
-```python
->>> history = pyc.get_history().values()
->>> history
-{'ひげを剃る。そして女子高生を拾う。': 'https://piccoma.com/web/product/8195/episodes', '悪女はマリオネット': 'https://piccoma.com/web/product/67171/episodes', 'かぐや様は告らせたい～天才たちの恋愛頭脳戦～': 'https://piccoma.com/web/product/4995/episodes', '復讐を誓った白猫は竜王の膝の上で惰眠をむさぼる': 'https://piccoma.com/web/product/12482/episodes'}
+```bash
+$ pyccoma purchase --filter all --include is_purchased --email foo@bar.com
 ```
-
-#### Getting all your purchased products from your `purchase` library:
 
 ```python
 >>> purchase = pyc.get_purchase().values()
->>> purchase
-{'かぐや様は告らせたい～天才たちの恋愛頭脳戦～': 'https://piccoma.com/web/product/4995/episodes'}
-```
-
-#### Getting all your bookmarked products from your `bookmark` library:
-
-```python
->>> bookmark = pyc.get_bookmark().values()
->>> bookmark
-{'ひげを剃る。そして女子高生を拾う。': 'https://piccoma.com/web/product/8195/episodes', '悪女はマリオネット': 'https://piccoma.com/web/product/67171/episodes'}
-```
-
-#### Downloading all your purchased episodes from your `purchase` library:
-
-```python
->>> purchase = pyc.get_purchase().values()
->>> purchased_episodes = [episode['url'] for title in purchase
-                          for episode in pyc.get_episode_list(title).values()
-                          if episode['is_purchased']]
->>> for episode in purchased_episodes:
-        pyc.fetch(episode, 'piccoma')
+>>> purchase = [episode['url'] for title in purchase for episode in pyc.get_list(title).values() if episode['is_purchased']]
+>>> for episode in purchase:
+      pyc.fetch(episode)
 
 Title: かぐや様は告らせたい～天才たちの恋愛頭脳戦～(赤坂アカ)
 Episode: 第135話
-|███████████████████████████████████████████████████████████| 100.0%
+  |███████████████████████████████████████████████████████████| 100.0% (20/20)
 Elapsed time: 00:00:23
 
 Title: かぐや様は告らせたい～天才たちの恋愛頭脳戦～(赤坂アカ)
 Episode: 第136話
-|███████████████████████████████████████████████████████████| 100.0%
+  |███████████████████████████████████████████████████████████| 100.0% (22/22)
 Elapsed time: 00:00:25
 ```
 
-#### Downloading the most recent episodes you have availed by using free pass from your `bookmark` library:
+* Downloading the most recent episodes you have read from your history:
+
+```bash
+$ pyccoma history --filter max --include "is_limited_read|(is_already_read&is_free)" --email foo@bar.com
+```
 
 ```python
 >>> bookmark = pyc.get_bookmark().values()
->>> latest_free_episodes = [[episode['url'] for episode in pyc.get_episode_list(title).values()
-                            if episode['is_free_read']]
-                            for title in bookmark]
->>> latest_free_episodes = [episode[-1] for episode in latest_free_episodes if episode]
->>> for episode in latest_free_episodes:
-        pyc.fetch(episode, 'piccoma')
+>>> bookmark = [[episode['url'] for episode in pyc.get_list(title).values()
+      if episode['is_limited_read'] or (episode['is_already_read'] and episode['is_free'])] for title in bookmark]
+>>> bookmark = [episode[-1] for episode in bookmark if episode]
+>>> for episode in bookmark:
+      pyc.fetch(episode)
 
 Title: ひげを剃る。そして女子高生を拾う。(しめさば ぶーた 足立いまる)
 Episode: 第2話 生活と遠慮 (1)
-|███████████████████████████████████████████████████████████| 100.0%
+  |███████████████████████████████████████████████████████████| 100.0% (16/16)
 Elapsed time: 00:00:18
 
 Title: 悪女はマリオネット(Manggle hanirim)
 Episode: 第29話
-|███████████████████████████████████████████████████████████| 100.0%
+  |███████████████████████████████████████████████████████████| 100.0% (98/98)
 Elapsed time: 00:01:38
 ```
 
-#### Downloading the next free episodes you can get from your `bookmark` library if free pass has not been used yet (should be run only once):
+* Downloading latest unread episodes using free pass (if available) from your bookmarks:
+
+```bash
+$ pyccoma bookmark --filter min --include is_limited_free --exclude is_already_read --email foo@bar.com
+```
 
 ```python
 >>> bookmark = pyc.get_bookmark().values()
->>> next_free_episodes = [[episode['url'] for episode in pyc.get_episode_list(title).values()
-                          if episode['is_wait_free'] and not episode['is_read']]
-                          for title in bookmark]
->>> next_free_episodes = [episode[0] for episode in next_free_episodes if episode]
+>>> bookmark = [[episode['url'] for episode in pyc.get_list(title).values()
+      if episode['is_limited_free'] and not episode['is_already_read']] for title in bookmark]
+>>> bookmark = [episode[0] for episode in next_free_episodes if episode]
 >>> for episode in next_free_episodes:
-        pyc.fetch(episode, 'piccoma')
+      pyc.fetch(episode, 'piccoma')
 
 Title: 悪女はマリオネット(Manggle hanirim)
 Episode: 第30話
-|███████████████████████████████████████████████████████████| 100.0%
+  |███████████████████████████████████████████████████████████| 100.0% (95/95)
 Elapsed time: 00:01:45
 ```
 
-Given the example above, let's say that you have only used the free episode pass on ひげを剃る。そして女子高生を拾う。while you have yet to use it on 悪女はマリオネット, this will automatically discard ひげを剃る。そして女子高生を拾う。 and use the free pass on 悪女はマリオネット given that it has an episode with status `is_wait_free` and that it has not been read yet.
+### Narrowing down the results
+
+You can set restrictive conditions using the include and exclude options in the command-line utility. These two options take in statuses as arguments. To have a clearer picture on what these statuses correspond to, see figure below.
+
+![s_piccoma_web_episode_etypeE](https://user-images.githubusercontent.com/18095632/137633753-6959890c-c6ec-461e-8b15-7218ee47cbe7.png)
+
+```python
+{
+  1437090: {'title': '第1話 (1)', 'url': 'https://piccoma.com/web/viewer/54715/1437090', 'is_free': True, 'is_limited_read': False, 'is_already_read': True, 'is_limited_free': False, 'is_purchased': False},
+  1437091: {'title': '第1話 (2)', 'url': 'https://piccoma.com/web/viewer/54715/1437091', 'is_free': True, 'is_limited_read': False, 'is_already_read': True, 'is_limited_free': False, 'is_purchased': False},
+  1437092: {'title': '第2話 (1)', 'url': 'https://piccoma.com/web/viewer/54715/1437092', 'is_free': True, 'is_limited_read': False, 'is_already_read': True, 'is_limited_free': False, 'is_purchased': False},
+  1437093: {'title': '第2話 (2)', 'url': 'https://piccoma.com/web/viewer/54715/1437093', 'is_free': False, 'is_limited_read': False, 'is_already_read': True, 'is_limited_free': True, 'is_purchased': False},
+  1437094: {'title': '第3話 (1)', 'url': 'https://piccoma.com/web/viewer/54715/1437094', 'is_free': False, 'is_limited_read': False, 'is_already_read': True, 'is_limited_free': True, 'is_purchased': False},
+  1437095: {'title': '第3話 (2)', 'url': 'https://piccoma.com/web/viewer/54715/1437095', 'is_free': False, 'is_limited_read': True, 'is_already_read': True, 'is_limited_free': False, 'is_purchased': False},
+  1437096: {'title': '第4話 (1)', 'url': 'https://piccoma.com/web/viewer/54715/1437096', 'is_free': False, 'is_limited_read': True, 'is_already_read': True, 'is_limited_free': False, 'is_purchased': False},
+  1437097: {'title': '第4話 (2)', 'url': 'https://piccoma.com/web/viewer/54715/1437097', 'is_free': False, 'is_limited_read': False, 'is_already_read': False, 'is_limited_free': True, 'is_purchased': False}
+}
+```
+
+
+
+## Options
+
+### Required
+
+|          Option           |              Description           |          Examples                                      |
+|---------------------------|------------------------------------|--------------------------------------------------------|
+|          url              | Must be a valid url                | `https://piccoma.com/web/product/4995/episodes?etype=V`, `https://piccoma.com/web/product/12482/episodes?etype=E`, `https://piccoma.com/web/viewer/12482/631201`, `bookmark`, `history`, `purchase` |
+
+### Optional
+
+|          Option           |              Description           |          Examples                                      |
+|---------------------------|------------------------------------|--------------------------------------------------------|
+|   -o, --output            | Local directory to save downloaded images     | `D:/piccoma/` (absolute path), `/piccoma/download/` (relative path)                                         |
+|   -f, --format            | Image format                       | `jpeg`, `jpg`, `bmp`, `png` (default)          |
+|   --omit-author           | Omit author names from titles      |                                                        |
+
+### Login
+
+|          Option           |              Description           |          Examples                                      |
+|---------------------------|------------------------------------|--------------------------------------------------------|
+|   --email        | Your registered email address; this does not support OAuth authentication              | `foo@bar.com`                                          |
+
+### Filter
+
+|  Option   |                    Description                         |                         Examples                               |
+|-----------|--------------------------------------------------------|----------------------------------------------------------------|
+| --etype   | Preferred episode type to scrape manga and smartoon when scraping `history`, `bookmark`, `purchase`; takes in two arguments, the first one for manga and the other for smartoon  | `volume` to scrape for volumes, `episode` to scrape for episodes |
+| --filter  | Filter to use when scraping manga and smartoon from your library; requires login | `min`, `max`, `all`, or `custom` by defining --range. Use `min` to scrape for the first item, `max` for the last item, `all` to scrape all items, and `custom` to scrape for a specific index range |
+| --range   | Range to use when scraping manga and smartoon episodes; takes in two arguments, start and end; will always override --filter to parse custom, if omitted or otherwise | `0 10` will scrape the first up to the ninth episode |
+| --include | Status arguments to include when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above]('#usage') | `is_purchased`, `is_free`, `is_already_read`, `is_limited_read`, `is_limited_free` |
+| --exclude | Status arguments to exclude when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above]('#usage') | `is_purchased`, `is_free`, `is_already_read`, `is_limited_read`, `is_limited_free` |
 
 ## License
 

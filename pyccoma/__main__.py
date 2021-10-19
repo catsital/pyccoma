@@ -10,89 +10,95 @@ from itertools import chain
 from typing import Optional, Union, Tuple, List
 
 from pyccoma.pyccoma import Scraper
-from pyccoma.helpers import create_tags, valid_url
+from pyccoma.helpers import create_tags, valid_url, is_episode_url
 from pyccoma.urls import history_url, bookmark_url, purchase_url
 
 log = logging.getLogger("pyccoma.cli")
 pyccoma = Scraper()
 
 def main() -> None:
-    parser = construct_parser()
-    args = parser.parse_args()
-    url = args.url
+    try:
+        parser = construct_parser()
+        args = parser.parse_args()
+        url = args.url
 
-    if args.format:
-        pyccoma.format = args.format
+        if args.format:
+            pyccoma.format = args.format
 
-    if args.etype:
-        pyccoma.manga = args.etype[0]
-        pyccoma.smartoon = args.etype[1]
+        if args.etype:
+            if 'volume' in args.etype or 'episode' in args.etype:
+                pyccoma.manga = args.etype[0]
+                pyccoma.smartoon = args.etype[1]
+            else:
+                parser.error("Invalid type.")
 
-    if args.omit_author:
-        pyccoma.omit_author = args.omit_author
+        if args.omit_author:
+            pyccoma.omit_author = args.omit_author
 
-    if not args.range and not 'viewer' in args.url and 'custom' in args.filter:
-        parser.error(
-            "Use --filter custom along with --range."
-        )
-    elif args.range and args.filter != 'custom':
-        log.warning("Overriding --filter={0} to parse custom.".format(args.filter))
-        args.filter = 'custom'
-
-    password = ""
-
-    if args.email:
-        if not password:
-            password = getpass()
-
-        pyccoma.login(args.email, password)
-
-    if args.url and args.filter:
-        if args.url in ('history', 'bookmark', 'purchase') and pyccoma.is_login:
-            if args.url in history_url:
-                url = pyccoma.get_history()
-                print("Parsing ({0}) items from your history library.".format(len(url)))
-
-            elif args.url in bookmark_url:
-                url = pyccoma.get_bookmark()
-                print("Parsing ({0}) items from your bookmark library.".format(len(url)))
-
-            elif args.url in purchase_url:
-                url = pyccoma.get_purchase()
-                print("Parsing ({0}) items from your purchase library.".format(len(url)))
-
-        elif "episodes?etype" in args.url:
-            print("Parsing episodes from {0}".format(args.url))
-            url = {1:args.url}
-
-        elif "viewer" in args.url:
+        if not args.range and not 'viewer' in args.url and args.filter == 'custom':
             parser.error(
-                "There is nothing to aggregate. You should only use "
-                "--filter on a product page or your library."
+                "Use --filter custom along with --range."
+            )
+        elif (args.range and not args.filter) or (args.range and args.filter in ('min', 'max', 'all')):
+            log.warning("Overriding --filter={0} to parse custom.".format(args.filter))
+            args.filter = 'custom'
+
+        password = ""
+
+        if args.email:
+            if not password:
+                password = getpass()
+
+            pyccoma.login(args.email, password)
+
+        if args.url and args.filter:
+            if args.url[0] in ('history', 'bookmark', 'purchase') and pyccoma.is_login:
+                if args.url[0] in history_url:
+                    url = pyccoma.get_history().values()
+                    print("Parsing ({0}) items from your history library.".format(len(url)))
+
+                elif args.url[0] in bookmark_url:
+                    url = pyccoma.get_bookmark().values()
+                    print("Parsing ({0}) items from your bookmark library.".format(len(url)))
+
+                elif args.url[0] in purchase_url:
+                    url = pyccoma.get_purchase().values()
+                    print("Parsing ({0}) items from your purchase library.".format(len(url)))
+
+                for index, item in enumerate(url):
+                    log.info(f"{index + 1}) {item}")
+
+            elif args.url[0] in ('history', 'bookmark', 'purchase') and not pyccoma.is_login:
+                parser.error("Login required.")
+
+            elif "viewer" in args.url[0]:
+                parser.error(
+                    "There is nothing to aggregate. You should only use "
+                    "--filter on a product page or your library."
+                )
+
+        if valid_url(str(args.url)):
+            if not os.path.exists(args.output) and not args.output:
+                log.warning(
+                    "No path found, creating an extract folder inside "
+                    "the current working directory: {0}".format(os.getcwd())
+                )
+            fetch(
+                url,
+                args.filter,
+                args.range,
+                args.include,
+                args.exclude,
+                args.output
             )
         else:
-            parser.error("Login required.")
-
-        for index, item in enumerate(url):
-            log.info(f"{index + 1}) {item}")
-
-    if valid_url(str(args.url)):
-        if not os.path.exists(args.output) and not args.output:
-            log.warning(
-                "No path found, creating an extract folder inside "
-                "the current working directory: {0}".format(os.getcwd())
+            parser.error(
+                "Invalid url."
             )
-        fetch(
-            url,
-            args.filter,
-            args.range,
-            args.include,
-            args.exclude,
-            args.output
-        )
-    else:
+
+    except Exception:
         parser.error(
-            "Invalid url."
+            "Exception on main."
         )
 
 def construct_parser() -> None:
@@ -107,6 +113,7 @@ def construct_parser() -> None:
     required = parser.add_argument_group("Required options")
     required.add_argument(
         "url",
+        nargs="*",
         help="Link to an episode or product. If using --filter, use: history, "
             "bookmark, or purchase as shorthand to scrape respective libraries."
     )
@@ -144,10 +151,12 @@ def construct_parser() -> None:
     filter = parser.add_argument_group("Filter options")
     filter.add_argument(
         "--etype",
-        type=etype,
-        default="volume:episode",
+        type=str,
+        nargs=2,
+        metavar=("MANGA", "SMARTOON"),
+        default=["volume", "episode"],
         help="Preferred episode type to scrape manga and smartoon when "
-            "using auto option. (Default: volume:episode)"
+            "agrregating your library. (Default: manga=volume, smartoon=episode)"
     )
     filter.add_argument(
         "--filter",
@@ -157,15 +166,17 @@ def construct_parser() -> None:
     )
     filter.add_argument(
         "--range",
-        type=range,
-        help="Range to use when scraping manga and smartoon episodes. "
+        type=int,
+        nargs=2,
+        metavar=("START", "END"),
+        help="Range to use when scraping manga and smartoon episodes."
     )
     filter.add_argument(
         "--include",
         type=include,
         default="episode",
         help="Arguments to include when parsing your library: is_purchased, is_free, "
-            "is_already_read, is_limited_read, is_limited_free (Default: is_free)"
+            "is_already_read, is_limited_read, is_limited_free"
     )
     filter.add_argument(
         "--exclude",
@@ -180,20 +191,6 @@ def construct_parser() -> None:
     info.add_argument("-v", "--version", action="version", help="Show program version.", version="%(prog)s 0.2.0")
 
     return parser
-
-def etype(value: str) -> Tuple[str, str]:
-    try:
-        manga, smartoon = map(str, value.split(':'))
-        return manga, smartoon
-    except Exception:
-        raise argparse.ArgumentTypeError("Specify type in this format: volume:episode")
-
-def range(value: int) -> Tuple[int, int]:
-    try:
-        start, end = map(int, value.split(':'))
-        return start, end
-    except Exception:
-        raise argparse.ArgumentTypeError("Specify type in this format: 0:10")
 
 def include(value: str) -> str:
     try:
@@ -210,7 +207,7 @@ def exclude(value: str) -> str:
         raise argparse.ArgumentTypeError('Specify type in this format: "is_free&is_already_read"')
 
 def fetch(
-    url: Union[str, List[str]],
+    url: List[str],
     mode: Optional[str] = None,
     range: Optional[Tuple[int, int]] = None,
     include: Optional[str] = None,
@@ -219,6 +216,8 @@ def fetch(
 ) -> None:
     try:
         if mode:
+            if not range:
+                range = (0, 0)
             flags = {
                 'min': '[episode[0] for episode in episodes if episode]',
                 'max': '[episode[-1] for episode in episodes if episode]',
@@ -229,20 +228,28 @@ def fetch(
             exclude = ' {0}not ({1})'.format('and ' if include else '', exclude)
 
             episodes = [[episode['url'] for episode in pyccoma.get_list(title).values()
-                if eval((include) + (exclude))] for title in url.values()]
+                if eval((include) + (exclude))] for title in url]
 
             episodes = eval(flags[mode])
+            episodes_total = len(episodes)
 
-            log.warning(f"Fetching ({len(episodes)}) episodes from the library.")
+            print(f"Fetching ({episodes_total}) episodes.")
 
-            for episode in episodes:
+            for index, episode in enumerate(episodes):
+                log.info(f"\nFetching {episode} ({index+1}/{episodes_total})")
                 pyccoma.fetch(episode, output)
 
         else:
-            pyccoma.fetch(url, output)
+            for index, link in enumerate(url):
+                if is_episode_url(link):
+                    log.info(f"\nFetching {link} ({index+1}/{len(url)})")
+                    pyccoma.fetch(link, output)
+                else:
+                    log.error("Use --filter to aggregate episodes in product pages.")
 
     except Exception as error:
-        parser.error(error)
+        log.debug(error)
+        log.error("Exiting the program.")
 
 if __name__ == "__main__":
     main()

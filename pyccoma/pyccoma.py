@@ -153,7 +153,7 @@ class Scraper:
         elif url.endswith('E'):
             return self.get_episode_list(url)
         else:
-            log.error("Error encountered: Invalid type")
+            log.error("Error encountered: Invalid type.")
 
     def get_episode_list(self, url: str) -> Mapping[int, Dict[str, bool]]:
         try:
@@ -246,17 +246,20 @@ class Scraper:
         return self.get_bdata(purchase_url)
 
     def get_bdata(self, url: str) -> Dict[str, str]:
-        if self.is_login:
-            page = self.parse_page(url).find('section', attrs={'class':'PCM-productTile'})
-            product_title = [title.text for title in page.select('span') if title.text]
-            product_type = [self.smartoon if 'PCM-stt_smartoon' in str(_type) else self.manga
-                            for _type in [type for type in page.findAll('li', attrs={'class':'PCM-slotProducts_list'})]]
-            product_link = [base_url + url.attrs['href'] + "/episodes?etype="
-                            for url in page.select('a', attrs={'class':'PCM-product'})]
-            items = {title: link + type for title, link, type in zip(product_title, product_link, product_type)}
-            return items
-        else:
-            log.error("You must be logged in to access your library.")
+        try:
+            if self.is_login:
+                page = self.parse_page(url).find('section', attrs={'class':'PCM-productTile'})
+                product_title = [title.text for title in page.select('span') if title.text]
+                product_type = [self.smartoon if 'PCM-stt_smartoon' in str(_type) else self.manga
+                                for _type in [type for type in page.findAll('li', attrs={'class':'PCM-slotProducts_list'})]]
+                product_link = [base_url + url.attrs['href'] + "/episodes?etype="
+                                for url in page.select('a', attrs={'class':'PCM-product'})]
+                items = {title: link + type for title, link, type in zip(product_title, product_link, product_type)}
+                return items
+            else:
+                log.error("You must be logged in to access your library.")
+        except Exception:
+            log.error("Failed to parse library.")
 
     def get_pdata(self, url: str) -> Dict[str, bool]:
         try:
@@ -305,7 +308,7 @@ class Scraper:
                 log.error('Failed to download: {0}'.format(img_url))
 
         except Exception:
-            log.error('Failed to write {0}'.format(output))
+            log.error('Error encountered on {0}: Failed to write {1}'.format(img_url, output))
 
     def fetch(self, url: str, path: Optional[str] = None) -> None:
         try:
@@ -363,3 +366,6 @@ class Scraper:
 
         except Exception:
             log.error("Error encountered: Unable to fetch episode")
+
+        except KeyboardInterrupt:
+            pass

@@ -37,7 +37,7 @@ def create_tags(text: str) -> str:
     return tags
 
 def trunc_title(title: str) -> str:
-    return re.sub(r'\([^)]*\)', '', title)
+    return re.sub(r'\((?:[^)(]|\([^)(]*\))*\)', '', title)
 
 def valid_url(url: str) -> bool:
     base_url = r'(http|https)://(|www.)piccoma.com/web'
@@ -49,3 +49,6 @@ def valid_url(url: str) -> bool:
     urls = "|".join(urls)
     regex = re.search(urls, url)
     return bool(regex)
+
+def is_episode_url(url: str) -> bool:
+    return True if 'viewer' in url else False
