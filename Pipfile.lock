@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "aa45ff96e7ff8377ea3d6e276cd04e95c22a1542f632f646fcd2b374f759b0c9"
+            "sha256": "63c34630e6fcdbdc398b1b6e0aa8f646b0e9da29689d5c9e2ad7f11f88cf5d34"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -54,6 +54,14 @@
             "markers": "python_version >= '3.0'",
             "version": "==3.3"
         },
+        "image-scramble": {
+            "hashes": [
+                "sha256:733b20560731fe9ab209d602836e936b727b8c9c595eec5650606c8f33d371a3",
+                "sha256:ded78073e26e217ca4ec25bb87904801b34cd2513bc4969f11c7d2354549ceae"
+            ],
+            "index": "pypi",
+            "version": "==1.1.1"
+        },
         "pillow": {
             "hashes": [
                 "sha256:066f3999cb3b070a95c3652712cffa1a748cd02d60ad7b4e485c3748a04d9d76",
@@ -100,11 +108,6 @@
             ],
             "markers": "python_version >= '3.6'",
             "version": "==8.4.0"
-        },
-        "pycasso": {
-            "editable": true,
-            "git": "https://github.com/catsital/pycasso.git",
-            "ref": "27f014d7a57cde03804943ecab948d409cd70715"
         },
         "requests": {
             "hashes": [

@@ -7,6 +7,16 @@ Directly scrape images from [Piccoma](https://piccoma.com).
 
 ## Setup
 
+You can get started by installing using pip or manually from source.
+
+### Install from PyPI
+
+```bash
+$ pip install pyccoma
+```
+
+### Install from source
+
 * First, you should get a copy of this project in your local machine by either downloading the zip file or cloning the repository. `git clone https://github.com/catsital/pyccoma.git`
 * `cd` into `pyccoma` directory.
 * Run `python setup.py install` to install package.
@@ -27,7 +37,7 @@ You can also pass multiple links (separated by whitespace) to download in one go
 $ pyccoma https://piccoma.com/web/viewer/60171/1575237 https://piccoma.com/web/viewer/5796/332058 https://piccoma.com/web/viewer/13034/623225
 ```
 
-See more examples on how to aggregate and batch download using the command-line utility on [the next section]('#usage') below.
+See more examples on how to aggregate and batch download using the command-line utility on [the next section]('https://github.com/catsital/pyccoma/#usage') below.
 
 ### Using Python shell
 
@@ -81,7 +91,7 @@ $ pyccoma https://piccoma.com/web/product/67171/episodes?etype=E --filter all --
 * Downloading using custom with range:
 
 ```bash
-$ pyccoma https://piccoma.com/web/product/16070/episodes?etype=E --filter custom --range 1:5
+$ pyccoma https://piccoma.com/web/product/16070/episodes?etype=E --filter custom --range 1 5
 ```
 
 * Downloading all free episodes across multiple products:
@@ -208,10 +218,10 @@ You can set restrictive conditions using the include and exclude options in the 
 |  Option   |                    Description                         |                         Examples                               |
 |-----------|--------------------------------------------------------|----------------------------------------------------------------|
 | --etype   | Preferred episode type to scrape manga and smartoon when scraping `history`, `bookmark`, `purchase`; takes in two arguments, the first one for manga and the other for smartoon  | `volume` to scrape for volumes, `episode` to scrape for episodes |
-| --filter  | Filter to use when scraping manga and smartoon from your library; requires login | `min`, `max`, `all`, or `custom` by defining --range. Use `min` to scrape for the first item, `max` for the last item, `all` to scrape all items, and `custom` to scrape for a specific index range |
+| --filter  | Filter to use when scraping manga and smartoon from a product page or your library | `min`, `max`, `all`, or `custom` by defining --range. Use `min` to scrape for the first item, `max` for the last item, `all` to scrape all items, and `custom` to scrape for a specific index range |
 | --range   | Range to use when scraping manga and smartoon episodes; takes in two arguments, start and end; will always override --filter to parse custom, if omitted or otherwise | `0 10` will scrape the first up to the ninth episode |
-| --include | Status arguments to include when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above]('#usage') | `is_purchased`, `is_free`, `is_already_read`, `is_limited_read`, `is_limited_free` |
-| --exclude | Status arguments to exclude when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above]('#usage') | `is_purchased`, `is_free`, `is_already_read`, `is_limited_read`, `is_limited_free` |
+| --include | Status arguments to include when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above]('https://github.com/catsital/pyccoma/#usage') | `is_purchased`, `is_free`, `is_already_read`, `is_limited_read`, `is_limited_free` |
+| --exclude | Status arguments to exclude when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above]('https://github.com/catsital/pyccoma/#usage') | `is_purchased`, `is_free`, `is_already_read`, `is_limited_read`, `is_limited_free` |
 
 ## License
 

@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 requirements = [
     "bs4==0.0.1",
     "requests==2.26.0",
-    "pycasso==1.1.1"
+    "image-scramble==1.1.1"
     ]
 
 setup(
@@ -28,7 +28,6 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    dependency_links = [ "https://github.com/catsital/pycasso/tarball/v1.1.1/main#egg=pycasso-1.1.1" ],
     packages=find_packages(),
     zip_safe=False
 )
