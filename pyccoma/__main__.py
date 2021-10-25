@@ -21,6 +21,7 @@ pyccoma = Scraper()
 
 def main() -> None:
     try:
+        setup_logging()
         parser = construct_parser()
         args = parser.parse_args()
         url = args.url
@@ -272,5 +273,4 @@ def fetch(
                 raise ValueError("Invalid url.")
 
 if __name__ == "__main__":
-    setup_logging()
     main()

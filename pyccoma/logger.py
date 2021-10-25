@@ -1,5 +1,6 @@
 import sys
 import logging
+
 from logging import CRITICAL, ERROR, DEBUG, INFO, WARN, NOTSET
 
 _levels = {
@@ -20,9 +21,7 @@ def setup_logging():
     handlers = [logging.StreamHandler(sys.stdout)]
     logging.basicConfig(
         handlers=handlers,
-        # format=("{asctime:^} [{levelname}] {message}"),
         format=("{asctime:^} - {levelname: ^7} - {funcName: ^16} - {message}"),
-        # format=("{asctime:^} | {levelname: ^8} | {funcName: ^16} | {message}"),
         style="{",
         datefmt="%m/%d/%Y %H:%M:%S",
     )
