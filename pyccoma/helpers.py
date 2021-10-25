@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+from typing import Optional
 
 log = logging.getLogger(__name__)
 
@@ -14,9 +15,9 @@ def create_path(path: str) -> str:
             path = os.path.join(os.getcwd(), path)
 
     if os.path.exists(path):
-        log.warning('Path already exists: {0}'.format(path))
+        log.warning(f"Path already exists: {path}")
     else:
-        log.debug('Creating path: {0}'.format(path))
+        log.debug(f"Creating path: {path}")
 
     os.makedirs(path, exist_ok=True)
     return path
@@ -30,25 +31,27 @@ def create_tags(text: str) -> str:
         r"is_purchased",
     ]
     identifiers = "|".join(identifiers)
-    pattern = r'(\b' + identifiers + r')\b(\s*(' + identifiers + r')\b)*'
+    pattern = r"(\b" + identifiers + r")\b(\s*(" + identifiers + r")\b)*"
 
     regex = re.compile(pattern, re.I)
     tags = regex.sub(r"episode['\1']", text.strip('"'))
     return tags
 
 def trunc_title(title: str) -> str:
-    return re.sub(r'\((?:[^)(]|\([^)(]*\))*\)', '', title)
+    return re.sub(r"\((?:[^)(]|\([^)(]*\))*\)", "", title)
 
-def valid_url(url: str) -> bool:
-    base_url = r'(http|https)://(|www.)piccoma.com/web'
+def valid_url(url: str, level: Optional[int] = None) -> bool:
+    base_url = r"(http|https)://(|www.)piccoma.com/web"
     urls = [
-        base_url + r'/product/([0-9\-]+)/episodes\?etype\=([eE|vV]+)',
-        base_url + r'/viewer/(|s/)([0-9]+)/([0-9]+)',
-        base_url + r'/bookshelf/|(bookmark|history|purchase)'
+        base_url + r"/product/([0-9\-]+)/episodes\?etype\=([eE|vV]+)",
+        base_url + r"/product/([0-9\-]+)/episodes\?etype\=([eE]+)",
+        base_url + r"/product/([0-9\-]+)/episodes\?etype\=([vV]+)",
+        base_url + r"/viewer/(|s/)([0-9]+)/([0-9]+)",
+        base_url + r"/bookshelf/|(bookmark|history|purchase)"
     ]
-    urls = "|".join(urls)
-    regex = re.search(urls, url)
+    if not level:
+        urls = "|".join(urls)
+        regex = re.search(urls, url)
+    else:
+        regex = re.search(urls[level], url)
     return bool(regex)
-
-def is_episode_url(url: str) -> bool:
-    return True if 'viewer' in url else False

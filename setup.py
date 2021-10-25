@@ -11,7 +11,7 @@ requirements = [
 
 setup(
     name="pyccoma",
-    version="0.2.1",
+    version="0.2.2",
     author="catsital",
     author_email="catshital@gmail.com",
     description="Scrape and download from Piccoma.",
@@ -25,7 +25,7 @@ setup(
     },
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: Apache Software License 2.0 (Apache-2.0)",
         "Operating System :: OS Independent",
     ],
     packages=find_packages(),
