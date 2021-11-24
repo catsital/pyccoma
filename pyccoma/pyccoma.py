@@ -4,21 +4,33 @@ import os
 import re
 import sys
 import logging
-import threading
 import requests
+import threading
 
 from functools import lru_cache
-from typing import Optional, Mapping, Union, Dict, List
-from time import time, gmtime, strftime
 from bs4 import BeautifulSoup as bs
+from time import time, gmtime, strftime
 from requests import get, session, Response
+from typing import Optional, Mapping, Union, Dict, List
 
 from pycasso import Canvas
 
-from pyccoma.urls import base_url, login_url, history_url, bookmark_url, purchase_url
-from pyccoma.helpers import create_path, safe_filename, trunc_title, valid_url
-from pyccoma.utils import display_progress_bar, get_checksum, get_seed, get_key, retry
 from pyccoma.exceptions import PyccomaError, PageError, LoginError
+from pyccoma.urls import (
+    base_url,
+    login_url,
+    history_url,
+    bookmark_url,
+    purchase_url
+)
+from pyccoma.helpers import create_path, safe_filename, trunc_title, valid_url
+from pyccoma.utils import (
+    display_progress_bar,
+    get_checksum,
+    get_seed,
+    get_key,
+    retry
+)
 
 log = logging.getLogger(__name__)
 
@@ -101,12 +113,14 @@ class Scraper:
     def parse_page(self, url: str) -> str:
         try:
             page = self.session.get(url, headers=self.headers)
+            page.raise_for_status()
             soup = self.parse(page.text)
             return soup
 
+        except requests.exceptions.HTTPError:
+            raise PageError(url)
         except Exception:
-            log.error("Failed to parse page.")
-            raise SystemExit
+            log.error(f"Failed to parse page.")
 
     def get_login_status(self) -> bool:
         page = self.parse_page(login_url)
@@ -124,7 +138,7 @@ class Scraper:
 
     def login(self, email: str, password: str) -> None:
         try:
-            log.debug(f"Logging in as: {email}")
+            log.debug(f"Logging in as {email}")
             session = self.session.get(login_url, headers=self.headers)
             csrf = self.parse(session.text).find('input', attrs={'name': self.CSRF_NAME})['value']
 
@@ -197,7 +211,7 @@ class Scraper:
 
             return episodes
 
-        except ValueError or IndexError:
+        except ValueError:
             log.error("Invalid url, unable to fetch episode list.")
         except AttributeError:
             raise PageError(url)
@@ -241,7 +255,7 @@ class Scraper:
 
             return volumes
 
-        except ValueError or IndexError:
+        except ValueError:
             log.error("Invalid url, unable to fetch volume list.")
         except AttributeError:
             raise PageError(url)
@@ -313,18 +327,18 @@ class Scraper:
 
             return pdata
 
-        except ValueError:
-            log.error("Invalid url, unable to fetch page data")
-        except Exception:
-            raise PageError(url)
+        except TypeError:
+            log.error("Unable to fetch page data.")
+        except IndexError:
+            pass
 
     @retry(retries=3, interval=1)
     def get_img(self, img_url: str) -> Response:
         try:
             img = get(img_url, headers=self.headers, stream=True)
+            return img
         except requests.exceptions.ConnectionError:
             raise Exception(img_url)
-        return img
 
     def download(self, img_url: str, seed: str, output: str) -> None:
         try:
@@ -340,14 +354,16 @@ class Scraper:
                             handler.write(chunk)
         except Exception:
             log.error("Unable to download image.")
+        except KeyboardInterrupt:
+            pass
 
     def fetch(self, url: str, path: Optional[str] = None) -> None:
         try:
             pdata = self.get_pdata(url)
             if not pdata and not self.is_login:
-                log.error("Restricted content: Login required.")
+                log.error("Restricted content, login required.")
             elif not pdata and self.is_login:
-                log.error("Restricted content: Coins required for access.")
+                log.error("Restricted content, coins required for access.")
             else:
                 sys.stdout.write(f"\nTitle: {pdata['title']}\nEpisode: {pdata['ep_title']}\n")
 

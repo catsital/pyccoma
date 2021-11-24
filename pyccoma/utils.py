@@ -2,8 +2,8 @@ import sys
 import logging
 
 from time import sleep
-from functools import wraps
 from typing import Callable
+from functools import wraps
 from requests import Response
 
 log = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ def retry(retries: int, interval: int) -> Callable[..., Response]:
                             log.error(f"Retrying ({retry}/{retries}) {err}")
                             sleep(interval)
             except Exception:
-                log.error(f"Maximum retries exceeded: {retry}/{retries}")
+                log.error(f"Maximum retries exceeded ({retry}/{retries})")
         return download
     return _retry
 

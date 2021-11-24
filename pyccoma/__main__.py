@@ -11,9 +11,9 @@ from itertools import chain
 from typing import Optional, Union, Tuple, List
 
 from pyccoma.pyccoma import Scraper
+from pyccoma.exceptions import PyccomaError
 from pyccoma.logger import setup_logging, levels
 from pyccoma.helpers import create_tags, valid_url
-from pyccoma.exceptions import PyccomaError
 from pyccoma.urls import history_url, bookmark_url, purchase_url
 
 log = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ def main() -> None:
             logging.getLogger().setLevel(args.loglevel)
 
         if not args.range and not 'viewer' in args.url and args.filter == 'custom':
-            parser.error("Use --filter custom along with --range.")
+            raise PyccomaError("Use --filter custom along with --range.")
 
         elif (args.range and not args.filter) or (args.range and args.filter in ('min', 'max', 'all')):
             log.warning("Overriding --filter={0} to parse custom.".format(args.filter))
@@ -70,7 +70,7 @@ def main() -> None:
                     log.info("Parsing ({0}) items from your purchase library.".format(len(url)))
 
             elif valid_url(args.url[0], level=3):
-                parser.error(
+                raise PyccomaError(
                     "There is nothing to aggregate. You should only use "
                     "--filter on a product page or your library."
                 )
@@ -205,7 +205,7 @@ def construct_parser() -> argparse.ArgumentParser:
 
     info = parser.add_argument_group("Info")
     info.add_argument("-h", "--help", action="help", help="Show this help message and exit."),
-    info.add_argument("-v", "--version", action="version", help="Show program version.", version="%(prog)s 0.2.2")
+    info.add_argument("-v", "--version", action="version", help="Show program version.", version="%(prog)s 0.2.3")
 
     return parser
 

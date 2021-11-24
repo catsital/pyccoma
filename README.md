@@ -37,7 +37,7 @@ You can also pass multiple links (separated by whitespace) to download in one go
 $ pyccoma https://piccoma.com/web/viewer/60171/1575237 https://piccoma.com/web/viewer/5796/332058 https://piccoma.com/web/viewer/13034/623225
 ```
 
-See more examples on how to aggregate and batch download using the command-line utility on [the next section](https://github.com/catsital/pyccoma/#usage) below.
+See more examples on how to aggregate and batch download using the command-line utility on [the next section](https://github.com/catsital/pyccoma#usage) below.
 
 ### Using Python shell
 
@@ -128,7 +128,7 @@ $ pyccoma purchase --filter all --include is_purchased --email foo@bar.com
 $ pyccoma history --filter max --include "is_limited_read|(is_already_read&is_free)" --email foo@bar.com
 ```
 
-* Downloading latest unread episodes using free pass (if available) from your bookmarks:
+* Downloading the latest unread episodes using free pass (if available) from your bookmarks:
 
 ```bash
 $ pyccoma bookmark --filter min --include is_limited_free --exclude is_already_read --email foo@bar.com
@@ -182,14 +182,14 @@ You can set restrictive conditions using the include and exclude options in the 
 | --etype   | Preferred episode type to scrape manga, smartoon, and novel when scraping `history`, `bookmark`, `purchase`; takes in three arguments, the first one for manga, the second for smartoon, and the last one for novel  | `volume` to scrape for volumes, `episode` to scrape for episodes |
 | --filter  | Filter to use when scraping episodes from a product page or your library | `min`, `max`, `all`, or `custom` by defining --range. Use `min` to scrape for the first item, `max` for the last item, `all` to scrape all items, and `custom` to scrape for a specific index range |
 | --range   | Range to use when scraping episodes; takes in two arguments, start and end; will always override --filter to parse custom, if omitted or otherwise | `0 10` will scrape the first up to the ninth episode |
-| --include | Status arguments to include when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above](https://github.com/catsital/pyccoma/#usage) | `is_purchased`, `is_free`, `is_already_read`, `is_limited_read`, `is_limited_free` |
-| --exclude | Status arguments to exclude when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above](https://github.com/catsital/pyccoma/#usage) | `is_purchased`, `is_free`, `is_already_read`, `is_limited_read`, `is_limited_free` |
+| --include | Status arguments to include when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above](https://github.com/catsital/pyccoma#usage) | `is_purchased`, `is_free`, `is_already_read`, `is_limited_read`, `is_limited_free` |
+| --exclude | Status arguments to exclude when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above](https://github.com/catsital/pyccoma#usage) | `is_purchased`, `is_free`, `is_already_read`, `is_limited_read`, `is_limited_free` |
 
 ### Logging
 
 |          Option           |              Description           |          Examples                                      |
 |---------------------------|------------------------------------|--------------------------------------------------------|
-|   --l, --loglevel         | Set the log message threshold      | `debug`, `info` (default), `warning`, `error`, `none`  |
+|   -l, --loglevel          | Set the log message threshold      | `debug`, `info` (default), `warning`, `error`, `none`  |
 
 ## License
 

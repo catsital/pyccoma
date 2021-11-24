@@ -11,7 +11,7 @@ requirements = [
 
 setup(
     name="pyccoma",
-    version="0.2.2",
+    version="0.2.3",
     author="catsital",
     author_email="catshital@gmail.com",
     description="Scrape and download from Piccoma.",
