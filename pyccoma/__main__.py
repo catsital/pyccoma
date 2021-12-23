@@ -205,7 +205,7 @@ def construct_parser() -> argparse.ArgumentParser:
 
     info = parser.add_argument_group("Info")
     info.add_argument("-h", "--help", action="help", help="Show this help message and exit."),
-    info.add_argument("-v", "--version", action="version", help="Show program version.", version="%(prog)s 0.2.3")
+    info.add_argument("-v", "--version", action="version", help="Show program version.", version="%(prog)s 0.3.0")
 
     return parser
 
@@ -236,7 +236,7 @@ def fetch(
             if not range:
                 range = (0, 0)
 
-            flags = {
+            filter = {
                 'min': '[episode[0] for episode in episodes if episode]',
                 'max': '[episode[-1] for episode in episodes if episode]',
                 'all': 'list(chain.from_iterable(episodes))',
@@ -244,15 +244,19 @@ def fetch(
             }
 
             exclude = " {0}not ({1})".format("and " if include else "", exclude)
+            flags = (include) + (exclude)
 
-            episodes = [
-                [episode['url'] for episode in pyccoma.get_list(title).values()
-                if eval((include) + (exclude))] for title in url
-            ]
+            episodes = []
 
-            episodes = eval(flags[mode])
+            for title in url:
+                product = []
+                episodes.append(product)
+                for episode in pyccoma.get_list(title).values():
+                    if eval(flags):
+                        product.append(episode['url'])
+
+            episodes = eval(filter[mode])
             episodes_total = len(episodes)
-
             log.info(f"Fetching ({episodes_total}) episodes.")
 
             for index, episode in enumerate(episodes):

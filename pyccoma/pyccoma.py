@@ -197,11 +197,11 @@ class Scraper:
                 id: {
                     'title': title,
                     'url': link,
-                    'is_free': True if 'status_free' in str(_status) else False,
-                    'is_limited_read': True if 'status_waitfreeRead' in str(_status) else False,
-                    'is_already_read': True if 'PCM-epList_read' in str(_status) else False,
-                    'is_limited_free': True if 'status_webwaitfree' in str(_status) else False,
-                    'is_purchased': True if 'status_buy' in str(_status) else False
+                    'is_free': True if '_free' in str(_status) else False,
+                    'is_limited_read': True if '_waitfreeRead' in str(_status) else False,
+                    'is_already_read': True if '_read' in str(_status) else False,
+                    'is_limited_free': True if '_webwaitfree' in str(_status) else False,
+                    'is_purchased': True if '_buy' in str(_status) else False
                 }
                 for id, title, link, _status in zip(episode_id, episode_title, episode_link, status)
             }
@@ -241,11 +241,11 @@ class Scraper:
                 id + 1: {
                     'title': title,
                     'url': link,
-                    'is_free': True if 'PCM-prdVol_campaign_free' in str(_status) else False,
-                    'is_limited_read': True if 'PCM-volList_read' and 'PCM-prdVol_campaign_free' in str(_status) else False,
-                    'is_already_read': True if 'PCM-volList_read' in str(_status) else False,
-                    'is_limited_free': True if 'PCM-prdVol_campaign_free' in str(_status) else False,
-                    'is_purchased': True if 'PCM-prdVol_read' in str(_status) else False
+                    'is_free': True if '_campaign_free' in str(_status) else False,
+                    'is_limited_read': True if '_read' and '_campaign_free' in str(_status) else False,
+                    'is_already_read': True if '_read' in str(_status) else False,
+                    'is_limited_free': True if '_campaign_free' in str(_status) else False,
+                    'is_purchased': True if '_read' in str(_status) else False
                 }
                 for id, (title, link, _status) in enumerate(zip(volume_title, volume_link, status))
             }
@@ -312,11 +312,9 @@ class Scraper:
             log.info(f"Parsing data from {url}")
 
             title = safe_filename(page.find('title').text.split("｜")[1])
-            script = page.findAll('script')[5]
-
-            ep_title = str(script).split('title')[1].split("'")[2].strip()
-            is_scrambled = str(script).split('isScrambled')[1].split(":")[1].split(",")[0].strip().title()
-            links = str(script).split("'img'")[1]
+            ep_title = str(page).split("'title'")[1].split("'")[1].strip()
+            is_scrambled = str(page).split("'isScrambled'")[1].split(":")[1].split(",")[0].strip().title()
+            links = str(page).split("'img'")[1]
             images = ["https://" + image.split("',")[0].strip() for image in links.split("{'path':'//") if "'," in image]
             pdata = {
                 'title': (title if not self.omit_author else trunc_title(title)),
