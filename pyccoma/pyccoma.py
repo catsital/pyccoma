@@ -54,6 +54,8 @@ class Scraper:
         }
         self._format = 'png'
         self._omit_author = False
+        self._retry_count = 3
+        self._retry_interval = 1
 
     @property
     def manga(self) -> str:
@@ -74,6 +76,14 @@ class Scraper:
     @property
     def omit_author(self) -> bool:
         return self._omit_author
+
+    @property
+    def retry_count(self) -> int:
+        return self._retry_count
+
+    @property
+    def retry_interval(self) -> int:
+        return self._retry_interval
 
     @manga.setter
     def manga(self, value: str) -> None:
@@ -107,6 +117,14 @@ class Scraper:
     def omit_author(self, value: bool) -> None:
         self._omit_author = value
 
+    @retry_count.setter
+    def retry_count(self, value: int) -> None:
+        self._retry_count = value
+
+    @retry_interval.setter
+    def retry_interval(self, value: int) -> None:
+        self._retry_interval = value
+
     def parse(self, page: str) -> str:
         return bs(page, 'html.parser')
 
@@ -128,13 +146,12 @@ class Scraper:
         return eval(is_login)
 
     @property
-    def is_login(self) -> bool:
+    def _is_login(self) -> bool:
         return self.__is_login
 
-    @is_login.setter
-    def is_login(self, value: str) -> None:
-        if type(value) is bool:
-            self.__is_login = value
+    @_is_login.setter
+    def _is_login(self, value: bool) -> None:
+        self.__is_login = value
 
     def login(self, email: str, password: str) -> None:
         try:
@@ -156,10 +173,10 @@ class Scraper:
             )
 
             if self.get_login_status():
-                self.is_login = True
+                self._is_login = True
                 log.info(f"Successfully logged in as {email}")
             else:
-                self.is_login = False
+                self._is_login = False
                 log.error(f"Failed to log in as {email}")
 
         except Exception:
@@ -197,7 +214,7 @@ class Scraper:
                 id: {
                     'title': title,
                     'url': link,
-                    'is_free': True if '_free' in str(_status) else False,
+                    'is_free': True if '_free' or '_zeroPlus' in str(_status) else False,
                     'is_limited_read': True if '_waitfreeRead' in str(_status) else False,
                     'is_already_read': True if '_read' in str(_status) else False,
                     'is_limited_free': True if '_webwaitfree' in str(_status) else False,
@@ -264,21 +281,21 @@ class Scraper:
 
     @lru_cache
     def get_history(self) -> Dict[str, str]:
-        if self.is_login:
+        if self._is_login:
             return self.get_bdata(history_url)
         else:
             raise LoginError
 
     @lru_cache
     def get_bookmark(self) -> Dict[str, str]:
-        if self.is_login:
+        if self._is_login:
             return self.get_bdata(bookmark_url)
         else:
             raise LoginError
 
     @lru_cache
     def get_purchase(self) -> Dict[str, str]:
-        if self.is_login:
+        if self._is_login:
             return self.get_bdata(purchase_url)
         else:
             raise LoginError
@@ -330,7 +347,7 @@ class Scraper:
         except IndexError:
             pass
 
-    @retry(retries=3, interval=1)
+    @retry()
     def get_img(self, img_url: str) -> Response:
         try:
             img = get(img_url, headers=self.headers, stream=True)
@@ -340,8 +357,7 @@ class Scraper:
 
     def download(self, img_url: str, seed: str, output: str) -> None:
         try:
-            with self._lock:
-                img = self.get_img(img_url)
+            img = self.get_img(img_url)
 
             if seed.isupper():
                 Canvas(img.raw, 50, seed).export(path=output)
@@ -358,9 +374,9 @@ class Scraper:
     def fetch(self, url: str, path: Optional[str] = None) -> None:
         try:
             pdata = self.get_pdata(url)
-            if not pdata and not self.is_login:
+            if not pdata and not self._is_login:
                 log.error("Restricted content, login required.")
-            elif not pdata and self.is_login:
+            elif not pdata and self._is_login:
                 log.error("Restricted content, coins required for access.")
             else:
                 sys.stdout.write(f"\nTitle: {pdata['title']}\nEpisode: {pdata['ep_title']}\n")

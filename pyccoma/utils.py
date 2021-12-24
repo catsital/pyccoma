@@ -19,22 +19,23 @@ def get_seed(checksum: str, expiry_key: int) -> str:
         if int(num) != 0: checksum = checksum[-int(num):] + checksum[:len(checksum)-int(num)]
     return checksum
 
-def retry(retries: int, interval: int) -> Callable[..., Response]:
+def retry() -> Callable[..., Response]:
     def _retry(func):
         @wraps(func)
-        def download(*args, **kwargs):
-            try:
-                for retry in range(1, retries + 1):
-                    try:
-                        return func(*args, **kwargs)
-                    except Exception as err:
-                        if retry == retries:
-                            raise Exception from err
-                        else:
-                            log.error(f"Retrying ({retry}/{retries}) {err}")
-                            sleep(interval)
-            except Exception:
-                log.error(f"Maximum retries exceeded ({retry}/{retries})")
+        def download(self, *args, **kwargs):
+            with self._lock:
+                try:
+                    for retry in range(1, self.retry_count + 1):
+                        try:
+                            return func(self, *args, **kwargs)
+                        except Exception as err:
+                            if retry == self.retry_count:
+                                raise Exception from err
+                            else:
+                                log.error(f"Retrying ({retry}/{self.retry_count}) {err}")
+                                sleep(self.retry_interval)
+                except Exception:
+                    log.error(f"Maximum retries exceeded ({retry}/{self.retry_count})")
         return download
     return _retry
 
