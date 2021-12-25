@@ -34,6 +34,12 @@ def main() -> None:
             pyccoma.smartoon = args.etype[1]
             pyccoma.novel = args.etype[2]
 
+        if args.retry_count:
+            pyccoma.retry_count = args.retry_count
+
+        if args.retry_interval:
+            pyccoma.retry_interval = args.retry_interval
+
         if args.omit_author:
             pyccoma.omit_author = args.omit_author
 
@@ -111,7 +117,7 @@ def construct_parser() -> argparse.ArgumentParser:
         nargs="*",
         help="""
         Link to an episode or product. If logged in, use: history, bookmark, or purchase
-        as shorthand to scraping libraries.
+        as shorthand to your library.
         """
     )
 
@@ -129,6 +135,20 @@ def construct_parser() -> argparse.ArgumentParser:
         type=str,
         default="png",
         help="Image format: png, jpeg, jpg, bmp (Default: png)"
+    )
+    optional.add_argument(
+        "--retry-count",
+        type=int,
+        metavar=("COUNT"),
+        default=3,
+        help="Number of download retry attempts when error occurred. (Default: 3)"
+    )
+    optional.add_argument(
+        "--retry-interval",
+        type=int,
+        metavar=("SECONDS"),
+        default=1,
+        help="Delay between each retry attempt. (Default: 1)"
     )
     optional.add_argument(
         "--omit-author",
@@ -205,7 +225,7 @@ def construct_parser() -> argparse.ArgumentParser:
 
     info = parser.add_argument_group("Info")
     info.add_argument("-h", "--help", action="help", help="Show this help message and exit."),
-    info.add_argument("-v", "--version", action="version", help="Show program version.", version="%(prog)s 0.3.0")
+    info.add_argument("-v", "--version", action="version", help="Show program version.", version="%(prog)s 0.4.0")
 
     return parser
 
@@ -249,11 +269,9 @@ def fetch(
             episodes = []
 
             for title in url:
-                product = []
-                episodes.append(product)
-                for episode in pyccoma.get_list(title).values():
-                    if eval(flags):
-                        product.append(episode['url'])
+                episodes.append(
+                    product := [episode['url'] for episode in pyccoma.get_list(title).values() if eval(flags)]
+                )
 
             episodes = eval(filter[mode])
             episodes_total = len(episodes)
