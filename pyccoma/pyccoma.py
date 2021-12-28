@@ -23,7 +23,13 @@ from pyccoma.urls import (
     bookmark_url,
     purchase_url
 )
-from pyccoma.helpers import create_path, safe_filename, trunc_title, valid_url
+from pyccoma.helpers import (
+    create_path,
+    safe_filename,
+    trunc_title,
+    valid_url,
+    pad_string
+)
 from pyccoma.utils import (
     display_progress_bar,
     get_checksum,
@@ -53,9 +59,11 @@ class Scraper:
             'novel': 'E'
         }
         self._format = 'png'
+        self._archive = False
         self._omit_author = False
         self._retry_count = 3
         self._retry_interval = 1
+        self._zeropad = 0
 
     @property
     def manga(self) -> str:
@@ -74,6 +82,10 @@ class Scraper:
         return self._format
 
     @property
+    def archive(self) -> bool:
+        return self._archive
+
+    @property
     def omit_author(self) -> bool:
         return self._omit_author
 
@@ -84,6 +96,10 @@ class Scraper:
     @property
     def retry_interval(self) -> int:
         return self._retry_interval
+
+    @property
+    def zeropad(self) -> int:
+        return self._zeropad
 
     @manga.setter
     def manga(self, value: str) -> None:
@@ -113,6 +129,10 @@ class Scraper:
         else:
             raise ValueError("Invalid format.")
 
+    @archive.setter
+    def archive(self, value: bool) -> None:
+        self._archive = value
+
     @omit_author.setter
     def omit_author(self, value: bool) -> None:
         self._omit_author = value
@@ -124,6 +144,10 @@ class Scraper:
     @retry_interval.setter
     def retry_interval(self, value: int) -> None:
         self._retry_interval = value
+
+    @zeropad.setter
+    def zeropad(self, value: int) -> None:
+        self._zeropad = value
 
     def parse(self, page: str) -> str:
         return bs(page, 'html.parser')
@@ -342,10 +366,8 @@ class Scraper:
 
             return pdata
 
-        except TypeError:
+        except TypeError or IndexError:
             log.error("Unable to fetch page data.")
-        except IndexError:
-            pass
 
     @retry()
     def get_img(self, img_url: str) -> Response:
@@ -374,30 +396,27 @@ class Scraper:
     def fetch(self, url: str, path: Optional[str] = None) -> None:
         try:
             pdata = self.get_pdata(url)
-            if not pdata and not self._is_login:
-                log.error("Restricted content, login required.")
-            elif not pdata and self._is_login:
-                log.error("Restricted content, coins required for access.")
-            else:
-                sys.stdout.write(f"\nTitle: {pdata['title']}\nEpisode: {pdata['ep_title']}\n")
+            sys.stdout.write(f"\nTitle: {pdata['title']}\nEpisode: {pdata['ep_title']}\n")
 
-                if not path:
-                    path = os.path.join(os.getcwd(), 'extract')
+            if not path:
+                path = os.path.join(os.getcwd(), 'extract')
 
-                tail_path = '{0}/{1}/'.format(pdata['title'], pdata['ep_title'])
-                head_path = os.path.join(path, tail_path)
-                dest_path = create_path(head_path)
+            tail_path = "{0}/{1}/".format(pdata['title'], pdata['ep_title'])
+            head_path = os.path.join(path, tail_path)
+            dest_path = create_path(head_path)
 
-                start_time = time()
-                self._fetch(pdata['img'], dest_path)
+            start_time = time()
+            self._fetch(pdata['img'], dest_path)
 
-                with self._lock:
-                    exec_time = strftime("%H:%M:%S", gmtime(time() - start_time))
-                    sys.stdout.write(f"\nElapsed time: {exec_time}\n\n")
-                    sys.stdout.flush()
+            with self._lock:
+                exec_time = strftime("%H:%M:%S", gmtime(time() - start_time))
+                sys.stdout.write(f"\nElapsed time: {exec_time}\n\n")
+                sys.stdout.flush()
 
         except TypeError:
             log.error("Unable to fetch episode.")
+        except IndexError:
+            log.error(f"Unable to access page on {url}")
         except Exception as err:
             raise PyccomaError(err)
         except KeyboardInterrupt:
@@ -412,8 +431,13 @@ class Scraper:
             seed = get_seed(checksum, key)
 
             for page, url in enumerate(episode):
-                output = os.path.join(path, f"{page + 1}.{self.format}")
-
+                output = os.path.join(
+                    path, "{page}.{format}"
+                    .format(
+                        page=pad_string(str(page+1), length=self.zeropad),
+                        format=self.format
+                    )
+                )
                 if os.path.exists(output):
                     log.debug(f"File already exists: {output}")
                 else:
@@ -423,7 +447,7 @@ class Scraper:
                     count += 1
                     display_progress_bar(count, episode_size)
 
-        except Exception:
-            log.error("Unable to fetch episode.")
+        except Exception as err:
+            log.error(f"Unable to fetch episode. {err}")
         except KeyboardInterrupt:
             pass

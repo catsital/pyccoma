@@ -25,26 +25,16 @@ def main() -> None:
         parser = construct_parser()
         args = parser.parse_args()
         url = args.url
+        pyccoma.format = args.format
+        pyccoma.manga = args.etype[0]
+        pyccoma.smartoon = args.etype[1]
+        pyccoma.novel = args.etype[2]
+        pyccoma.zeropad = args.zeropad
+        pyccoma.retry_count = args.retry_count
+        pyccoma.retry_interval = args.retry_interval
+        pyccoma.omit_author = args.omit_author
 
-        if args.format:
-            pyccoma.format = args.format
-
-        if args.etype:
-            pyccoma.manga = args.etype[0]
-            pyccoma.smartoon = args.etype[1]
-            pyccoma.novel = args.etype[2]
-
-        if args.retry_count:
-            pyccoma.retry_count = args.retry_count
-
-        if args.retry_interval:
-            pyccoma.retry_interval = args.retry_interval
-
-        if args.omit_author:
-            pyccoma.omit_author = args.omit_author
-
-        if args.loglevel:
-            logging.getLogger().setLevel(args.loglevel)
+        logging.getLogger().setLevel(args.loglevel)
 
         if not args.range and not 'viewer' in args.url and args.filter == 'custom':
             raise PyccomaError("Use --filter custom along with --range.")
@@ -137,6 +127,14 @@ def construct_parser() -> argparse.ArgumentParser:
         help="Image format: png, jpeg, jpg, bmp (Default: png)"
     )
     optional.add_argument(
+        "-z",
+        "--zeropad",
+        type=int,
+        metavar=("LENGTH"),
+        default=0,
+        help="Pad page numbers with leading zeroes (Default: 0)"
+    )
+    optional.add_argument(
         "--retry-count",
         type=int,
         metavar=("COUNT"),
@@ -149,6 +147,13 @@ def construct_parser() -> argparse.ArgumentParser:
         metavar=("SECONDS"),
         default=1,
         help="Delay between each retry attempt. (Default: 1)"
+    )
+    optional.add_argument(
+        "--archive",
+        dest="archive",
+        action="store_true",
+        default=False,
+        help="Output to .cbz archive format."
     )
     optional.add_argument(
         "--omit-author",

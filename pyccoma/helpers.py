@@ -40,6 +40,13 @@ def create_tags(text: str) -> str:
 def trunc_title(title: str) -> str:
     return re.sub(r"\((?:[^)(]|\([^)(]*\))*\)", "", title)
 
+def pad_string(text: str, length: Optional[int] = 0, padding: Optional[str] = "0") -> str:
+    if len(text) <= length:
+        for pad in range(length-len(text)):
+            padding += "0"
+        text = f"{padding}{text}"
+    return text
+
 def valid_url(url: str, level: Optional[int] = None) -> bool:
     base_url = r"(http|https)://(|www.)piccoma.com/web"
     urls = [
