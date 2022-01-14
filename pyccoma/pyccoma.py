@@ -3,6 +3,7 @@
 import os
 import re
 import sys
+import zipfile
 import logging
 import requests
 import threading
@@ -124,7 +125,7 @@ class Scraper:
 
     @format.setter
     def format(self, value: str) -> None:
-        if value in ('png', 'jpg', 'bmp', 'jpeg'):
+        if value in ('png', 'gif', 'bmp', 'jpeg'):
             self._format = value.lower()
         else:
             raise ValueError("Invalid format.")
@@ -204,8 +205,7 @@ class Scraper:
                 log.error(f"Failed to log in as {email}")
 
         except Exception:
-            log.error("Failed to establish connection to server.")
-            raise SystemExit
+            raise SystemExit("Failed to establish connection to server.")
 
     def get_list(self, url: str) -> Mapping[int, Dict[str, bool]]:
         if url.endswith('V'):
@@ -238,7 +238,8 @@ class Scraper:
                 id: {
                     'title': title,
                     'url': link,
-                    'is_free': True if '_free' or '_zeroPlus' in str(_status) else False,
+                    'is_free': True if '_free' in str(_status) else False,
+                    'is_zero_plus': True if '_zeroPlus' in str(_status) else False,
                     'is_limited_read': True if '_waitfreeRead' in str(_status) else False,
                     'is_already_read': True if '_read' in str(_status) else False,
                     'is_limited_free': True if '_webwaitfree' in str(_status) else False,
@@ -382,14 +383,50 @@ class Scraper:
             img = self.get_img(img_url)
 
             if seed.isupper():
-                Canvas(img.raw, 50, seed).export(path=output)
+                Canvas(img.raw, (50, 50), seed).export(
+                    mode="scramble",
+                    path=output,
+                    format=self.format
+                )
             else:
                 with open(output, 'wb') as handler:
                     for chunk in img.iter_content(1024):
                         if chunk:
                             handler.write(chunk)
-        except Exception:
-            log.error("Unable to download image.")
+        except Exception as err:
+            log.error(f"Unable to download image. {err}")
+        except KeyboardInterrupt:
+            pass
+
+    def compress(
+        self,
+        img_url: str,
+        seed: str,
+        page: str,
+        path: str,
+        title: str,
+        ep_title: str
+    ) -> None:
+        try:
+            img = self.get_img(img_url)
+
+            if seed.isupper():
+                img = Canvas(img.raw, (50, 50), seed).export(
+                    mode="scramble",
+                    format=self.format
+                )
+                img = img.getvalue()
+            else:
+                img = img.content
+
+            archive = os.path.join(path, f"{title}_{ep_title}.cbz")
+
+            with self._lock:
+                with zipfile.ZipFile(archive, "a", zipfile.ZIP_DEFLATED, False) as file:
+                    file.writestr(f"{page}.{self.format}", img)
+
+        except Exception as err:
+            log.error(f"Unable to download image. {err}")
         except KeyboardInterrupt:
             pass
 
@@ -401,12 +438,8 @@ class Scraper:
             if not path:
                 path = os.path.join(os.getcwd(), 'extract')
 
-            tail_path = "{0}/{1}/".format(pdata['title'], pdata['ep_title'])
-            head_path = os.path.join(path, tail_path)
-            dest_path = create_path(head_path)
-
             start_time = time()
-            self._fetch(pdata['img'], dest_path)
+            self._fetch(pdata['img'], pdata['title'], pdata['ep_title'], path)
 
             with self._lock:
                 exec_time = strftime("%H:%M:%S", gmtime(time() - start_time))
@@ -422,7 +455,7 @@ class Scraper:
         except KeyboardInterrupt:
             pass
 
-    def _fetch(self, episode: List[str], path: str) -> None:
+    def _fetch(self, episode: List[str], title: str, ep_title: str, path: str) -> None:
         try:
             count = 0
             episode_size = len(episode)
@@ -430,19 +463,33 @@ class Scraper:
             key = get_key(episode[0])
             seed = get_seed(checksum, key)
 
+            if not self.archive:
+                head_path = os.path.join(path, f"{title}/{ep_title}/")
+                path = create_path(head_path)
+            else:
+                path = create_path(path)
+
             for page, url in enumerate(episode):
                 output = os.path.join(
-                    path, "{page}.{format}"
-                    .format(
-                        page=pad_string(str(page+1), length=self.zeropad),
-                        format=self.format
-                    )
+                    path,
+                    page_num := pad_string(str(page + 1), length=self.zeropad)
                 )
-                if os.path.exists(output):
-                    log.debug(f"File already exists: {output}")
+
+                if os.path.exists(file_name := f"{output}.{self.format}"):
+                    log.debug(f"File already exists: {file_name}")
                 else:
-                    download = threading.Thread(target=self.download, args=(url, seed, output))
-                    download.start()
+                    if self.archive:
+                        fetch = threading.Thread(
+                            target=self.compress,
+                            args=(url, seed, page_num, path, title, ep_title)
+                        )
+                    else:
+                        fetch = threading.Thread(
+                            target=self.download,
+                            args=(url, seed, output)
+                        )
+                    fetch.start()
+
                 with self._lock:
                     count += 1
                     display_progress_bar(count, episode_size)

@@ -140,18 +140,16 @@ You can set restrictive conditions using the include and exclude options in the 
 
 ![s_piccoma_web_episode_etypeE](https://user-images.githubusercontent.com/18095632/137633753-6959890c-c6ec-461e-8b15-7218ee47cbe7.png)
 
-```python
-{
-  1437090: {'title': '第1話 (1)', 'url': 'https://piccoma.com/web/viewer/54715/1437090', 'is_free': True, 'is_limited_read': False, 'is_already_read': True, 'is_limited_free': False, 'is_purchased': False},
-  1437091: {'title': '第1話 (2)', 'url': 'https://piccoma.com/web/viewer/54715/1437091', 'is_free': True, 'is_limited_read': False, 'is_already_read': True, 'is_limited_free': False, 'is_purchased': False},
-  1437092: {'title': '第2話 (1)', 'url': 'https://piccoma.com/web/viewer/54715/1437092', 'is_free': True, 'is_limited_read': False, 'is_already_read': True, 'is_limited_free': False, 'is_purchased': False},
-  1437093: {'title': '第2話 (2)', 'url': 'https://piccoma.com/web/viewer/54715/1437093', 'is_free': False, 'is_limited_read': False, 'is_already_read': True, 'is_limited_free': True, 'is_purchased': False},
-  1437094: {'title': '第3話 (1)', 'url': 'https://piccoma.com/web/viewer/54715/1437094', 'is_free': False, 'is_limited_read': True, 'is_already_read': True, 'is_limited_free': False, 'is_purchased': False},
-  1437095: {'title': '第3話 (2)', 'url': 'https://piccoma.com/web/viewer/54715/1437095', 'is_free': False, 'is_limited_read': True, 'is_already_read': True, 'is_limited_free': False, 'is_purchased': False},
-  1437096: {'title': '第4話 (1)', 'url': 'https://piccoma.com/web/viewer/54715/1437096', 'is_free': False, 'is_limited_read': True, 'is_already_read': True, 'is_limited_free': False, 'is_purchased': False},
-  1437097: {'title': '第4話 (2)', 'url': 'https://piccoma.com/web/viewer/54715/1437097', 'is_free': False, 'is_limited_read': False, 'is_already_read': False, 'is_limited_free': True, 'is_purchased': False}
-}
-```
+| Episode  | `is_free` | `is_limited_free` | `is_limited_read` | `is_already_read` | `is_zero_plus` |`is_purchased` |
+|----------|-----------|-------------------|-------------------|-------------------|----------------|---------------|
+| 第1話 (1)| True      | False             | False             | True              | False          | False         |
+| 第1話 (2)| True      | False             | False             | True              | False          | False         |
+| 第2話 (1)| True      | False             | False             | True              | False          | False         |
+| 第2話 (2)| False     | True              | False             | True              | False          | False         |
+| 第3話 (1)| False     | False             | True              | True              | False          | False         |
+| 第3話 (2)| False     | False             | True              | True              | False          | False         |
+| 第4話 (1)| False     | False             | True              | True              | False          | False         |
+| 第4話 (2)| False     | True              | False             | False             | False          | False         |
 
 ## Options
 
@@ -163,17 +161,26 @@ You can set restrictive conditions using the include and exclude options in the 
 
 ### Optional
 
-|          Option           |              Description           |          Examples                                      |
-|---------------------------|------------------------------------|--------------------------------------------------------|
-|   -o, --output            | Local directory to save downloaded images     | `D:/piccoma/` (absolute path), `/piccoma/download/` (relative path)                                         |
-|   -f, --format            | Image format                       | `jpeg`, `jpg`, `bmp`, `png` (default)          |
-|   --omit-author           | Omit author names from titles      |                                                        |
+|     Option      |              Description                  |                          Examples                                      |
+|-----------------|-------------------------------------------|------------------------------------------------------------------------|
+| -o, --output    | Local directory to save downloaded images | `D:/piccoma/` (absolute path), `/piccoma/download/` (relative path)             |
+| -f, --format    | Image format                              | `jpeg`, `gif`, `bmp`, `png` (default)                                  |
+| -p, --pad       | Pad page numbers with leading zeroes      | `0` (default)                                                          |
+| --archive       | Download as `cbz` archive |                                                                 |
+| --omit-author   | Omit author names from titles             |                                                                        |
+
+### Retry
+
+|     Option      |              Description                  |                          Examples                                      |
+|-----------------|-------------------------------------------|------------------------------------------------------------------------|
+| --retry-count   | Number of download retry attempts when error occurred | `3` (default)                                              |
+| --retry-interval| Delay between each retry attempt (in seconds) | `1` (default)                                                      |
 
 ### Login
 
 |          Option           |              Description           |          Examples                                      |
 |---------------------------|------------------------------------|--------------------------------------------------------|
-|   --email        | Your registered email address; this does not support OAuth authentication              | `foo@bar.com`                                          |
+|   --email                 | Your registered email address; this does not support OAuth authentication                   | `foo@bar.com`               |
 
 ### Filter
 
@@ -182,8 +189,8 @@ You can set restrictive conditions using the include and exclude options in the 
 | --etype   | Preferred episode type to scrape manga, smartoon, and novel when scraping `history`, `bookmark`, `purchase`; takes in three arguments, the first one for manga, the second for smartoon, and the last one for novel  | `volume` to scrape for volumes, `episode` to scrape for episodes |
 | --filter  | Filter to use when scraping episodes from a product page or your library | `min`, `max`, `all`, or `custom` by defining --range. Use `min` to scrape for the first item, `max` for the last item, `all` to scrape all items, and `custom` to scrape for a specific index range |
 | --range   | Range to use when scraping episodes; takes in two arguments, start and end; will always override --filter to parse custom, if omitted or otherwise | `0 10` will scrape the first up to the ninth episode |
-| --include | Status arguments to include when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above](https://github.com/catsital/pyccoma#usage) | `is_purchased`, `is_free`, `is_already_read`, `is_limited_read`, `is_limited_free` |
-| --exclude | Status arguments to exclude when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above](https://github.com/catsital/pyccoma#usage) | `is_purchased`, `is_free`, `is_already_read`, `is_limited_read`, `is_limited_free` |
+| --include | Status arguments to include when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above](https://github.com/catsital/pyccoma#usage) | `is_purchased`, `is_free`, `is_zero_plus`, `is_already_read`, `is_limited_read`, `is_limited_free` |
+| --exclude | Status arguments to exclude when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above](https://github.com/catsital/pyccoma#usage) | `is_purchased`, `is_free`, `is_zero_plus`, `is_already_read`, `is_limited_read`, `is_limited_free` |
 
 ### Logging
 

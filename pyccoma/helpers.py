@@ -28,6 +28,7 @@ def create_tags(text: str) -> str:
         r"is_limited_free",
         r"is_already_read",
         r"is_free",
+        r"is_zero_plus",
         r"is_purchased",
     ]
     identifiers = "|".join(identifiers)

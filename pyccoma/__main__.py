@@ -29,9 +29,10 @@ def main() -> None:
         pyccoma.manga = args.etype[0]
         pyccoma.smartoon = args.etype[1]
         pyccoma.novel = args.etype[2]
-        pyccoma.zeropad = args.zeropad
+        pyccoma.zeropad = args.pad
         pyccoma.retry_count = args.retry_count
         pyccoma.retry_interval = args.retry_interval
+        pyccoma.archive = args.archive
         pyccoma.omit_author = args.omit_author
 
         logging.getLogger().setLevel(args.loglevel)
@@ -127,33 +128,19 @@ def construct_parser() -> argparse.ArgumentParser:
         help="Image format: png, jpeg, jpg, bmp (Default: png)"
     )
     optional.add_argument(
-        "-z",
-        "--zeropad",
+        "-p",
+        "--pad",
         type=int,
         metavar=("LENGTH"),
         default=0,
         help="Pad page numbers with leading zeroes (Default: 0)"
     )
     optional.add_argument(
-        "--retry-count",
-        type=int,
-        metavar=("COUNT"),
-        default=3,
-        help="Number of download retry attempts when error occurred. (Default: 3)"
-    )
-    optional.add_argument(
-        "--retry-interval",
-        type=int,
-        metavar=("SECONDS"),
-        default=1,
-        help="Delay between each retry attempt. (Default: 1)"
-    )
-    optional.add_argument(
         "--archive",
         dest="archive",
         action="store_true",
         default=False,
-        help="Output to .cbz archive format."
+        help="Output to cbz archive format."
     )
     optional.add_argument(
         "--omit-author",
@@ -161,6 +148,22 @@ def construct_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help="Omit author(s) in title naming scheme."
+    )
+
+    retry = parser.add_argument_group("Retry options")
+    retry.add_argument(
+        "--retry-count",
+        type=int,
+        metavar=("COUNT"),
+        default=3,
+        help="Number of download retry attempts when error occurred. (Default: 3)"
+    )
+    retry.add_argument(
+        "--retry-interval",
+        type=int,
+        metavar=("SECONDS"),
+        default=1,
+        help="Delay between each retry attempt. (Default: 1)"
     )
 
     user = parser.add_argument_group("Login options")
@@ -203,7 +206,7 @@ def construct_parser() -> argparse.ArgumentParser:
         default="episode",
         help="""
         Arguments to include when parsing your library: is_purchased, is_free,
-        is_already_read, is_limited_read, is_limited_free
+        is_zero_plus, is_already_read, is_limited_read, is_limited_free
         """
     )
     filter.add_argument(
@@ -212,7 +215,7 @@ def construct_parser() -> argparse.ArgumentParser:
         default="",
         help="""
         Arguments to exclude when parsing your library: is_purchased, is_free,
-        is_already_read, is_limited_read, is_limited_free
+        is_zero_plus, is_already_read, is_limited_read, is_limited_free
         """
     )
 
@@ -268,14 +271,14 @@ def fetch(
                 'custom': f"list(chain.from_iterable(episodes))[{range[0]}:{range[1]}]",
             }
 
-            exclude = " {0}not ({1})".format("and " if include else "", exclude)
-            flags = (include) + (exclude)
-
+            if exclude:
+                exclude = " {0}not ({1})".format("and " if include else "", exclude)
             episodes = []
 
             for title in url:
                 episodes.append(
-                    product := [episode['url'] for episode in pyccoma.get_list(title).values() if eval(flags)]
+                    product := [episode['url'] for episode in pyccoma.get_list(title).values()
+                        if eval((include) + (exclude))]
                 )
 
             episodes = eval(filter[mode])

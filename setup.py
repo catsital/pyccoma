@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 requirements = [
     "bs4==0.0.1",
     "requests==2.26.0",
-    "image-scramble==1.1.1"
+    "image-scramble==2.0.1"
     ]
 
 setup(
