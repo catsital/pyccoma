@@ -157,16 +157,16 @@ You can set restrictive conditions using the include and exclude options in the 
 
 |          Option           |              Description           |          Examples                                      |
 |---------------------------|------------------------------------|--------------------------------------------------------|
-|          url              | Must be a valid url                | `https://piccoma.com/web/product/4995/episodes?etype=V`, `https://piccoma.com/web/product/12482/episodes?etype=E`, `https://piccoma.com/web/viewer/12482/631201`, `bookmark`, `history`, `purchase` |
+|          url              | Must be a valid url                | `https://piccoma.com/web/product/4995/episodes?etype=V`, `https://piccoma.com/web/product/12482/episodes?etype=E`, `https://piccoma.com/web/viewer/12482/631201`, `bookmark`, `history`, `purchase`                       |
 
 ### Optional
 
 |     Option      |              Description                  |                          Examples                                      |
 |-----------------|-------------------------------------------|------------------------------------------------------------------------|
-| -o, --output    | Local directory to save downloaded images | `D:/piccoma/` (absolute path), `/piccoma/download/` (relative path)             |
-| -f, --format    | Image format                              | `jpeg`, `gif`, `bmp`, `png` (default)                                  |
+| -o, --output    | Local directory to save downloaded images | `D:/piccoma/` (absolute path), `/piccoma/download/` (relative path)    |
+| -f, --format    | Image format                              | `jpeg`, `jpg`, `gif`, `bmp`, `png` (default)                           |
 | -p, --pad       | Pad page numbers with leading zeroes      | `0` (default)                                                          |
-| --archive       | Download as `cbz` archive |                                                                 |
+| --archive       | Download as `cbz` archive                 |                                                                        |
 | --omit-author   | Omit author names from titles             |                                                                        |
 
 ### Retry
@@ -178,8 +178,8 @@ You can set restrictive conditions using the include and exclude options in the 
 
 ### Login
 
-|          Option           |              Description           |          Examples                                      |
-|---------------------------|------------------------------------|--------------------------------------------------------|
+|          Option           |              Description                                                                    |          Examples           |
+|---------------------------|---------------------------------------------------------------------------------------------|-----------------------------|
 |   --email                 | Your registered email address; this does not support OAuth authentication                   | `foo@bar.com`               |
 
 ### Filter

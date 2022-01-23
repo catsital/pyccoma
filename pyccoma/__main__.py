@@ -125,7 +125,7 @@ def construct_parser() -> argparse.ArgumentParser:
         "--format",
         type=str,
         default="png",
-        help="Image format: png, jpeg, jpg, bmp (Default: png)"
+        help="Image format: png, jpeg, jpg, gif, bmp (Default: png)"
     )
     optional.add_argument(
         "-p",
@@ -233,7 +233,7 @@ def construct_parser() -> argparse.ArgumentParser:
 
     info = parser.add_argument_group("Info")
     info.add_argument("-h", "--help", action="help", help="Show this help message and exit."),
-    info.add_argument("-v", "--version", action="version", help="Show program version.", version="%(prog)s 0.4.0")
+    info.add_argument("-v", "--version", action="version", help="Show program version.", version="%(prog)s 0.4.1")
 
     return parser
 

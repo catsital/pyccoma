@@ -125,7 +125,7 @@ class Scraper:
 
     @format.setter
     def format(self, value: str) -> None:
-        if value in ('png', 'gif', 'bmp', 'jpeg'):
+        if value in ('png', 'jpg', 'gif', 'bmp', 'jpeg'):
             self._format = value.lower()
         else:
             raise ValueError("Invalid format.")
@@ -389,10 +389,11 @@ class Scraper:
                     format=self.format
                 )
             else:
-                with open(output, 'wb') as handler:
+                with open(f"{output}.{self.format}", 'wb') as handler:
                     for chunk in img.iter_content(1024):
                         if chunk:
                             handler.write(chunk)
+
         except Exception as err:
             log.error(f"Unable to download image. {err}")
         except KeyboardInterrupt:
