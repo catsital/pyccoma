@@ -1,9 +1,11 @@
 # Pyccoma
 
-Directly scrape images from [Piccoma](https://piccoma.com).
+[![Downloads](https://pepy.tech/badge/pyccoma/week)](https://pepy.tech/project/pyccoma)
+[![Latest GitHub release](https://img.shields.io/github/tag/catsital/pyccoma.svg)](https://github.com/catsital/pyccoma/releases/latest)
+[![License](https://badgen.net/github/license/catsital/pyccoma)](https://github.com/catsital/pyccoma/blob/main/LICENSE)
+[![Publish](https://github.com/catsital/pyccoma/actions/workflows/python-publish.yml/badge.svg)](https://github.com/catsital/pyccoma/actions/workflows/python-publish.yml)
 
-## Prerequisites
-* Python 3.8+
+Directly scrape images from [Piccoma](https://piccoma.com).
 
 ## Setup
 
@@ -197,10 +199,6 @@ You can set restrictive conditions using the include and exclude options in the 
 |          Option           |              Description           |          Examples                                      |
 |---------------------------|------------------------------------|--------------------------------------------------------|
 |   -l, --loglevel          | Set the log message threshold      | `debug`, `info` (default), `warning`, `error`, `none`  |
-
-## License
-
-See [LICENSE](https://github.com/catsital/pyccoma/blob/main/LICENSE) for details.
 
 ## Disclaimer
 

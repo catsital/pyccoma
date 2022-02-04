@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
 __project__ = "pyccoma"
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 
 from .pyccoma import Scraper

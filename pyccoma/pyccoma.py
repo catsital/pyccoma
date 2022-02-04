@@ -8,8 +8,8 @@ import logging
 import requests
 import threading
 
+from lxml import html
 from functools import lru_cache
-from bs4 import BeautifulSoup as bs
 from time import time, gmtime, strftime
 from requests import get, session, Response
 from typing import Optional, Mapping, Union, Dict, List
@@ -41,12 +41,14 @@ from pyccoma.utils import (
 
 log = logging.getLogger(__name__)
 
+
 class Scraper:
     CSRF_NAME = 'csrfmiddlewaretoken'
 
     def __init__(self):
         self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                          'AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/92.0.4515.107 Safari/537.36',
             'Referer': '{0}?next_url=/web/'.format(login_url)
         }
@@ -151,7 +153,7 @@ class Scraper:
         self._zeropad = value
 
     def parse(self, page: str) -> str:
-        return bs(page, 'html.parser')
+        return html.fromstring(page)
 
     def parse_page(self, url: str) -> str:
         try:
@@ -162,12 +164,13 @@ class Scraper:
 
         except requests.exceptions.HTTPError:
             raise PageError(url)
-        except Exception:
-            log.error(f"Failed to parse page.")
+        except Exception as err:
+            log.error(f"Failed to parse page. {err}")
 
     def get_login_status(self) -> bool:
-        page = self.parse_page(login_url)
-        is_login = str(page.findAll('script')[3]).split('login')[1].split(":")[1].split(",")[0].strip().title()
+        is_login = self.parse_page(login_url).xpath(
+            '//script[contains(text(), "login")]/text()'
+        )[0].split(":")[1].split(",")[0].strip().title()
         return eval(is_login)
 
     @property
@@ -182,7 +185,9 @@ class Scraper:
         try:
             log.debug(f"Logging in as {email}")
             session = self.session.get(login_url, headers=self.headers)
-            csrf = self.parse(session.text).find('input', attrs={'name': self.CSRF_NAME})['value']
+            csrf = self.parse(session.text).xpath(
+                f'//input[@name = "{self.CSRF_NAME}"]/@value'
+            )
 
             params = {
                 self.CSRF_NAME: csrf,
@@ -215,37 +220,45 @@ class Scraper:
         else:
             raise ValueError("Invalid input.")
 
-    def get_episode_list(self, url: str) -> Mapping[int, Dict[str, Union[str, bool]]]:
+    def get_episode_list(
+        self,
+        url: str
+    ) -> Mapping[int, Dict[str, Union[str, bool]]]:
         try:
             url = self.get_valid_url(url, 1)
-            page = self.parse_page(url).find('ul', attrs={'id':'js_episodeList'})
-            log.debug(f"Parsing episode list from {url}")
-            series_id = url.split('/')[-2]
-            episode_title = [title.text for title in page.findAll('h2')]
-
-            episode_id = [
-                int(episode_id['data-episode_id'])
-                for episode_id in page.select('a[data-episode_id]')
+            page = self.parse_page(url).xpath('//ul[@id = "js_episodeList"]')[0]
+            episode_title = [
+                title.text_content() for title in page.xpath(
+                    './/div[@class ="PCM-epList_title"]/h2'
+                )
             ]
+            episode_id = [id for id in page.xpath('./li/a/@data-episode_id')]
+            series_id = url.split('/')[-2]
+
             episode_link = [
                 "https://piccoma.com/web/viewer/{0}/{1}"
                 .format(series_id, id) for id in episode_id
             ]
 
-            status = page.findAll('li', attrs={'class':'PCM-product_episodeList'})
+            status = [_status for _status in page.xpath('./li')]
 
             episodes = {
                 id: {
                     'title': title,
                     'url': link,
-                    'is_free': True if '_free' in str(_status) else False,
-                    'is_zero_plus': True if '_zeroPlus' in str(_status) else False,
-                    'is_limited_read': True if '_waitfreeRead' in str(_status) else False,
-                    'is_already_read': True if '_read' in str(_status) else False,
-                    'is_limited_free': True if '_webwaitfree' in str(_status) else False,
-                    'is_purchased': True if '_buy' in str(_status) else False
+                    'is_free': True if _status.find_class('PCM-epList_status_free') else False,
+                    'is_zero_plus': True if _status.find_class('PCM-epList_status_zeroPlus') else False,
+                    'is_limited_read': True if _status.find_class('PCM-epList_status_waitfreeRead') else False,
+                    'is_already_read': True if _status.find_class('PCM-epList_read') else False,
+                    'is_limited_free': True if _status.find_class('PCM-epList_status_webwaitfree') else False,
+                    'is_purchased': True if _status.find_class('PCM-epList_status_buy') else False
                 }
-                for id, title, link, _status in zip(episode_id, episode_title, episode_link, status)
+                for id, title, link, _status in zip(
+                    episode_id,
+                    episode_title,
+                    episode_link,
+                    status
+                )
             }
 
             if not episodes:
@@ -260,36 +273,48 @@ class Scraper:
         except Exception as err:
             raise PyccomaError(err)
 
-    def get_volume_list(self, url: str) -> Mapping[int, Dict[str, Union[str, bool]]]:
+    def get_volume_list(
+        self,
+        url: str
+    ) -> Mapping[int, Dict[str, Union[str, bool]]]:
         try:
             url = self.get_valid_url(url, 2)
-            page = self.parse_page(url).find('ul', attrs={'id':'js_volumeList'})
-            log.debug(f"Parsing volume list from {url}")
+            page = self.parse_page(url).xpath('//ul[@id = "js_volumeList"]')[0]
+            volume_title = [
+                title.text_content() for title in page.xpath(
+                    './/div[@class ="PCM-prdVol_title"]//h2'
+                )
+            ]
             series_id = url.split('/')[-2]
-            volume_title = [title.text for title in page.findAll('h2')]
-
             volume_id = [
-                [volume_id['data-episode_id'] for volume_id in links.select('a[data-episode_id]')]
-                for links in page.findAll('div', attrs={'class':'PCM-prdVol_btns'})
+                [volume_id for volume_id in links.xpath('./a/@data-episode_id')]
+                for links in page.xpath('//div[@class ="PCM-prdVol_btns"]')
             ]
             volume_link = [
                 "https://piccoma.com/web/viewer/{0}/{1}"
                 .format(series_id, id[0]) for id in volume_id
             ]
 
-            status = page.findAll('li', attrs={'class':'PCM-prdVol'})
+            xpath_status = './li'
+            status = [_status for _status in page.xpath(f'{xpath_status}')]
 
             volumes = {
                 id + 1: {
                     'title': title,
                     'url': link,
-                    'is_free': True if '_campaign_free' in str(_status) else False,
-                    'is_limited_read': True if '_read' and '_campaign_free' in str(_status) else False,
-                    'is_already_read': True if '_read' in str(_status) else False,
-                    'is_limited_free': True if '_campaign_free' in str(_status) else False,
-                    'is_purchased': True if '_read' in str(_status) else False
+                    'is_free': True if _status.find_class('PCM-prdVol_freeBtn') else False,
+                    'is_limited_read': True if (_status.find_class('PCM-prdVol_readBtn') and _status.find_class('PCM-prdVol_campaign_free')) else False,
+                    'is_already_read': True if _status.find_class('PCM-volList_read') else False,
+                    'is_limited_free': True if _status.find_class('PCM-prdVol_campaign_free') else False,
+                    'is_purchased': True if _status.find_class('PCM-prdVol_readBtn') else False
                 }
-                for id, (title, link, _status) in enumerate(zip(volume_title, volume_link, status))
+                for id, (title, link, _status) in enumerate(
+                    zip(
+                        volume_title,
+                        volume_link,
+                        status
+                    )
+                )
             }
 
             if not volumes:
@@ -333,14 +358,28 @@ class Scraper:
 
     def get_bdata(self, url: str) -> Dict[str, str]:
         try:
-            page = self.parse_page(url).find('section', attrs={'class':'PCM-productTile'})
-            product_title = [title.text for title in page.select('span') if title.text]
-            product_type = [self.smartoon if 'PCM-stt_smartoon' in str(_type)
-                else self.novel if 'PCM-stt_novel' in str(_type) else self.manga
-                for _type in [type for type in page.findAll('li', attrs={'class':'PCM-slotProducts_list'})]]
-            product_link = [base_url + url.attrs['href'] + "/episodes?etype="
-                for url in page.select('a', attrs={'class':'PCM-product'})]
-            items = {title: link + type for title, link, type in zip(product_title, product_link, product_type)}
+            page = self.parse_page(url).xpath(
+                '//section[@class = "PCM-productTile"]'
+            )[0]
+            product_title = [
+                title.text for title in page.xpath('.//p//span') if title.text
+            ]
+            product_type = [
+                self.smartoon if 'PCM-stt_smartoon' in _type else
+                self.novel if 'PCM-stt_novel' in _type else self.manga
+                for _type in [
+                    type.classes for type in page.xpath('.//li')
+                ]
+            ]
+            product_link = [
+                base_url + url + "/episodes?etype="
+                for url in page.xpath('//a[@class = "PCM-product"]/@href')
+            ]
+            items = {
+                title: link + type for title, link, type in zip(
+                    product_title, product_link, product_type
+                )
+            }
             return items
 
         except Exception:
@@ -353,15 +392,18 @@ class Scraper:
 
             log.info(f"Parsing data from {url}")
 
-            title = safe_filename(page.find('title').text.split("｜")[1])
-            ep_title = str(page).split("'title'")[1].split("'")[1].strip()
-            is_scrambled = str(page).split("'isScrambled'")[1].split(":")[1].split(",")[0].strip().title()
-            links = str(page).split("'img'")[1]
-            images = ["https://" + image.split("',")[0].strip() for image in links.split("{'path':'//") if "'," in image]
+            title = safe_filename(
+                page.xpath('//title')[0].text_content().split("｜")[1]
+            )
+
+            page = page.xpath('//script[contains(text(), "pdata")]/text()')[0]
+            ep_title = page.split("'title'")[1].split("'")[1].strip()
+
+            pattern = r"(?<=:')[^']+(?=')"
+            images = ["https:" + image for image in re.findall(pattern, page)]
             pdata = {
                 'title': (title if not self.omit_author else trunc_title(title)),
                 'ep_title': ep_title,
-                'is_scrambled': eval(is_scrambled),
                 'img': images
             }
 
@@ -456,7 +498,13 @@ class Scraper:
         except KeyboardInterrupt:
             pass
 
-    def _fetch(self, episode: List[str], title: str, ep_title: str, path: str) -> None:
+    def _fetch(
+        self,
+        episode: List[str],
+        title: str,
+        ep_title: str,
+        path: str
+    ) -> None:
         try:
             count = 0
             episode_size = len(episode)

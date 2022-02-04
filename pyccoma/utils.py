@@ -8,16 +8,21 @@ from requests import Response
 
 log = logging.getLogger(__name__)
 
+
 def get_checksum(img_url: str) -> str:
     return img_url.split('/')[-2]
+
 
 def get_key(img_url: str) -> str:
     return img_url.split('?')[1].split('&')[1].split('=')[1]
 
+
 def get_seed(checksum: str, expiry_key: int) -> str:
     for num in expiry_key:
-        if int(num) != 0: checksum = checksum[-int(num):] + checksum[:len(checksum)-int(num)]
+        if int(num) != 0:
+            checksum = checksum[-int(num):] + checksum[:len(checksum)-int(num)]
     return checksum
+
 
 def retry() -> Callable[..., Response]:
     def _retry(func):
@@ -32,12 +37,19 @@ def retry() -> Callable[..., Response]:
                             if retry == self.retry_count:
                                 raise Exception from err
                             else:
-                                log.error(f"Retrying ({retry}/{self.retry_count}) {err}")
+                                log.error(
+                                    f"Retrying ({retry}/{self.retry_count}) "
+                                    f"{err}"
+                                )
                                 sleep(self.retry_interval)
                 except Exception:
-                    log.error(f"Maximum retries exceeded ({retry}/{self.retry_count})")
+                    log.error(
+                        f"Maximum retries exceeded ({retry}/"
+                        f"{self.retry_count})"
+                    )
         return download
     return _retry
+
 
 def display_progress_bar(
     file_count: int,

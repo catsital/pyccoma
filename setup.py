@@ -4,14 +4,14 @@ with open("README.md", "r", encoding="utf-8") as f:
     long_description = f.read()
 
 requirements = [
-    "bs4==0.0.1",
+    "lxml==4.7.1",
     "requests==2.26.0",
     "image-scramble==2.0.1"
     ]
 
 setup(
     name="pyccoma",
-    version="0.4.1",
+    version="0.4.2",
     author="catsital",
     author_email="catshital@gmail.com",
     description="Scrape and download from Piccoma.",

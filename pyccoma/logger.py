@@ -14,6 +14,7 @@ _levels = {
 
 levels = [name for _, name in _levels.items()]
 
+
 def setup_logging():
     for level, name in _levels.items():
         logging.addLevelName(level, name)

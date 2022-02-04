@@ -2,13 +2,11 @@
 
 import argparse
 
-import re
 import os
-import sys
 import logging
 from getpass import getpass
+from typing import Optional, Tuple, List
 from itertools import chain
-from typing import Optional, Union, Tuple, List
 
 from pyccoma.pyccoma import Scraper
 from pyccoma.exceptions import PyccomaError
@@ -18,6 +16,7 @@ from pyccoma.urls import history_url, bookmark_url, purchase_url
 
 log = logging.getLogger(__name__)
 pyccoma = Scraper()
+
 
 def main() -> None:
     try:
@@ -37,11 +36,19 @@ def main() -> None:
 
         logging.getLogger().setLevel(args.loglevel)
 
-        if not args.range and not 'viewer' in args.url and args.filter == 'custom':
+        if not (
+            args.range and 'viewer' not in args.url
+        ) and (
+            args.filter == 'custom'
+        ):
             raise PyccomaError("Use --filter custom along with --range.")
 
-        elif (args.range and not args.filter) or (args.range and args.filter in ('min', 'max', 'all')):
-            log.warning("Overriding --filter={0} to parse custom.".format(args.filter))
+        elif (
+            args.range and not args.filter
+        ) or (
+            args.range and args.filter in ('min', 'max', 'all')
+        ):
+            log.warning(f"Overriding --filter={args.filter} to parse custom.")
             args.filter = 'custom'
 
         password = ""
@@ -56,15 +63,21 @@ def main() -> None:
             if args.url[0] in ('history', 'bookmark', 'purchase'):
                 if args.url[0] in history_url:
                     url = pyccoma.get_history().values()
-                    log.info("Parsing ({0}) items from your history library.".format(len(url)))
+                    log.info(
+                        f"Parsing ({len(url)}) titles from your history."
+                    )
 
                 elif args.url[0] in bookmark_url:
                     url = pyccoma.get_bookmark().values()
-                    log.info("Parsing ({0}) items from your bookmark library.".format(len(url)))
+                    log.info(
+                        f"Parsing ({len(url)}) titles from your bookmarks."
+                    )
 
                 elif args.url[0] in purchase_url:
                     url = pyccoma.get_purchase().values()
-                    log.info("Parsing ({0}) items from your purchase library.".format(len(url)))
+                    log.info(
+                        f"Parsing ({len(url)}) titles from your purchases."
+                    )
 
             elif valid_url(args.url[0], level=3):
                 raise PyccomaError(
@@ -92,12 +105,14 @@ def main() -> None:
     except Exception as error:
         parser.error(error)
 
+
 def construct_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="pyccoma",
-        description=" Scrape and download from Piccoma. ",
+        description="Scrape and download from Piccoma.",
         epilog="""
-        Report bugs and make feature requests at https://github.com/catsital/pyccoma/issues
+        Report bugs and make feature requests at
+        https://github.com/catsital/pyccoma/issues
         """,
         add_help=False,
     )
@@ -107,8 +122,8 @@ def construct_parser() -> argparse.ArgumentParser:
         "url",
         nargs="*",
         help="""
-        Link to an episode or product. If logged in, use: history, bookmark, or purchase
-        as shorthand to your library.
+        Link to an episode or product. If logged in, use: history, bookmark,
+        or purchase as shorthand to your library.
         """
     )
 
@@ -156,7 +171,7 @@ def construct_parser() -> argparse.ArgumentParser:
         type=int,
         metavar=("COUNT"),
         default=3,
-        help="Number of download retry attempts when error occurred. (Default: 3)"
+        help="Number of download retry attempts. (Default: 3)"
     )
     retry.add_argument(
         "--retry-interval",
@@ -181,16 +196,17 @@ def construct_parser() -> argparse.ArgumentParser:
         metavar=("MANGA", "SMARTOON", "NOVEL"),
         default=["volume", "episode", "episode"],
         help="""
-        Preferred episode type to scrape manga, smartoon and novel when aggregating
-        your library. (Default: manga=volume smartoon=episode novel=episode)
+        Preferred episode type to scrape manga, smartoon and novel when
+        aggregating your library. (Default: manga=volume
+        smartoon=episode novel=episode)
         """
     )
     filter.add_argument(
         "--filter",
         type=str,
         help="""
-        Filter to use when aggregating products or scraping library. Can be either:
-        min, max, all, or custom with --range.
+        Filter to use when aggregating products or scraping library. Can be
+        either: min, max, all, or custom with --range.
         """
     )
     filter.add_argument(
@@ -232,24 +248,40 @@ def construct_parser() -> argparse.ArgumentParser:
     )
 
     info = parser.add_argument_group("Info")
-    info.add_argument("-h", "--help", action="help", help="Show this help message and exit."),
-    info.add_argument("-v", "--version", action="version", help="Show program version.", version="%(prog)s 0.4.1")
+    info.add_argument(
+        "-h", "--help",
+        action="help",
+        help="Show this help message and exit."
+    ),
+    info.add_argument(
+        "-v", "--version",
+        action="version",
+        help="Show program version.",
+        version="%(prog)s 0.4.2"
+    )
 
     return parser
+
 
 def include(value: str) -> str:
     try:
         include = create_tags(value).replace("&", " and ").replace("|", " or ")
         return include
     except Exception:
-        raise argparse.ArgumentTypeError('Specify type in this format: "is_free|is_already_read"')
+        raise argparse.ArgumentTypeError(
+            'Specify type in this format: "is_free|is_already_read"'
+        )
+
 
 def exclude(value: str) -> str:
     try:
         exclude = create_tags(value).replace("&", " and ").replace("|", " or ")
         return exclude
     except Exception:
-        raise argparse.ArgumentTypeError('Specify type in this format: "is_free&is_already_read"')
+        raise argparse.ArgumentTypeError(
+            'Specify type in this format: "is_free&is_already_read"'
+        )
+
 
 def fetch(
     url: List[str],
@@ -264,30 +296,40 @@ def fetch(
             if not range:
                 range = (0, 0)
 
-            filter = {
-                'min': '[episode[0] for episode in episodes if episode]',
-                'max': '[episode[-1] for episode in episodes if episode]',
-                'all': 'list(chain.from_iterable(episodes))',
-                'custom': f"list(chain.from_iterable(episodes))[{range[0]}:{range[1]}]",
-            }
-
             if exclude:
-                exclude = " {0}not ({1})".format("and " if include else "", exclude)
-            episodes = []
-
-            for title in url:
-                episodes.append(
-                    product := [episode['url'] for episode in pyccoma.get_list(title).values()
-                        if eval((include) + (exclude))]
+                exclude = " {0}not ({1})".format(
+                    "and " if include else "", exclude
                 )
 
-            episodes = eval(filter[mode])
-            episodes_total = len(episodes)
-            log.info(f"Fetching ({episodes_total}) episodes.")
+            product = []
 
-            for index, episode in enumerate(episodes):
-                log.info(f"Fetching ({index+1}/{episodes_total})")
-                pyccoma.fetch(episode, output)
+            for title in url:
+                product.append([
+                    episode['url']
+                    for episode in pyccoma.get_list(title).values()
+                    if eval((include) + (exclude))
+                ])
+
+            if 'min' in mode:
+                product = [episode[0] for episode in product if episode]
+            elif 'max' in mode:
+                product = [episode[-1] for episode in product if episode]
+            elif 'all' in mode:
+                product = list(
+                    chain.from_iterable(product)
+                )
+            elif 'custom' in mode:
+                product = list(
+                    chain.from_iterable(product)
+                )[range[0]:range[1]]
+            else:
+                raise ValueError
+
+            log.info("Fetching ({0}) items.".format(total := len(product)))
+
+            for index, item in enumerate(product):
+                log.info(f"Fetching ({index+1}/{total})")
+                pyccoma.fetch(item, output)
 
         except Exception as error:
             raise PyccomaError(error)
@@ -298,9 +340,12 @@ def fetch(
                 log.info(f"Fetching ({index+1}/{len(url)})")
                 pyccoma.fetch(link, output)
             elif valid_url(url=link, level=0):
-                raise PyccomaError("Use --filter to aggregate episodes in product pages.")
+                raise PyccomaError(
+                    "Use --filter to aggregate episodes in product pages."
+                )
             else:
                 raise ValueError("Invalid url.")
+
 
 if __name__ == "__main__":
     main()

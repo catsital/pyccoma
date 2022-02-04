@@ -4,11 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-bs4 = "*"
 requests = "*"
-image-scramble = "*"
+lxml = "*"
+image-scramble = "==2.0.1"
 
 [dev-packages]
+flake8 = "*"
 
 [requires]
 python_version = "3.8"

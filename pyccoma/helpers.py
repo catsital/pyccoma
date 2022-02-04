@@ -5,9 +5,11 @@ from typing import Optional
 
 log = logging.getLogger(__name__)
 
+
 def safe_filename(title: str) -> str:
     pattern = re.compile(r'[?"|:<>*/\\]', flags=re.VERBOSE)
     return pattern.sub("", str(title))
+
 
 def create_path(path: str) -> str:
     if path:
@@ -21,6 +23,7 @@ def create_path(path: str) -> str:
 
     os.makedirs(path, exist_ok=True)
     return path
+
 
 def create_tags(text: str) -> str:
     identifiers = [
@@ -38,15 +41,22 @@ def create_tags(text: str) -> str:
     tags = regex.sub(r"episode['\1']", text.strip('"'))
     return tags
 
+
 def trunc_title(title: str) -> str:
     return re.sub(r"\((?:[^)(]|\([^)(]*\))*\)", "", title)
 
-def pad_string(text: str, length: Optional[int] = 0, padding: Optional[str] = "0") -> str:
+
+def pad_string(
+    text: str,
+    length: Optional[int] = 0,
+    padding: Optional[str] = "0"
+) -> str:
     if len(text) <= length:
         for pad in range(length-len(text)):
             padding += "0"
         text = f"{padding}{text}"
     return text
+
 
 def valid_url(url: str, level: Optional[int] = None) -> bool:
     base_url = r"(http|https)://(|www.)piccoma.com/web"
