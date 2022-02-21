@@ -3,13 +3,14 @@
 import os
 import re
 import sys
-import zipfile
 import logging
+import zipfile
 import requests
-import threading
 
 from lxml import html
+from zipfile import ZipFile
 from functools import lru_cache
+from threading import Thread, Lock
 from time import time, gmtime, strftime
 from requests import get, session, Response
 from typing import Optional, Mapping, Union, Dict, List
@@ -55,13 +56,9 @@ class Scraper:
         self.session = session()
         self.session.verify = True
         self.__is_login = False
-        self._lock = threading.Lock()
-        self._etype = {
-            'manga': 'V',
-            'smartoon': 'E',
-            'novel': 'E'
-        }
-        self._format = 'png'
+        self._lock = Lock()
+        self._etype = {"manga": "V", "smartoon": "E", "novel": "E"}
+        self._format = "png"
         self._archive = False
         self._omit_author = False
         self._retry_count = 3
@@ -152,10 +149,10 @@ class Scraper:
     def zeropad(self, value: int) -> None:
         self._zeropad = value
 
-    def parse(self, page: str) -> str:
+    def parse(self, page: str) -> html:
         return html.fromstring(page)
 
-    def parse_page(self, url: str) -> str:
+    def parse_page(self, url: str) -> html:
         try:
             page = self.session.get(url, headers=self.headers)
             page.raise_for_status()
@@ -164,8 +161,10 @@ class Scraper:
 
         except requests.exceptions.HTTPError:
             raise PageError(url)
-        except Exception as err:
-            log.error(f"Failed to parse page. {err}")
+        except requests.exceptions.ConnectionError:
+            raise PageError(url)
+        except Exception:
+            log.error("Failed to parse page.")
 
     def get_login_status(self) -> bool:
         is_login = self.parse_page(login_url).xpath(
@@ -213,12 +212,16 @@ class Scraper:
             raise SystemExit("Failed to establish connection to server.")
 
     def get_list(self, url: str) -> Mapping[int, Dict[str, bool]]:
-        if url.endswith('V'):
-            return self.get_volume_list(url)
-        elif url.endswith('E'):
-            return self.get_episode_list(url)
-        else:
-            raise ValueError("Invalid input.")
+        try:
+            if url.endswith('V'):
+                return self.get_volume_list(url)
+            elif url.endswith('E'):
+                return self.get_episode_list(url)
+            else:
+                raise ValueError("Invalid input.")
+
+        except Exception:
+            raise PageError(url)
 
     def get_episode_list(
         self,
@@ -446,9 +449,7 @@ class Scraper:
         img_url: str,
         seed: str,
         page: str,
-        path: str,
-        title: str,
-        ep_title: str
+        file: ZipFile
     ) -> None:
         try:
             img = self.get_img(img_url)
@@ -462,11 +463,8 @@ class Scraper:
             else:
                 img = img.content
 
-            archive = os.path.join(path, f"{title}_{ep_title}.cbz")
-
             with self._lock:
-                with zipfile.ZipFile(archive, "a", zipfile.ZIP_DEFLATED, False) as file:
-                    file.writestr(f"{page}.{self.format}", img)
+                file.writestr(page, img)
 
         except Exception as err:
             log.error(f"Unable to download image. {err}")
@@ -476,7 +474,10 @@ class Scraper:
     def fetch(self, url: str, path: Optional[str] = None) -> None:
         try:
             pdata = self.get_pdata(url)
-            sys.stdout.write(f"\nTitle: {pdata['title']}\nEpisode: {pdata['ep_title']}\n")
+            sys.stdout.write(
+                f"\nTitle: {pdata['title']}\n"
+                f"Episode: {pdata['ep_title']}\n"
+            )
 
             if not path:
                 path = os.path.join(os.getcwd(), 'extract')
@@ -516,7 +517,13 @@ class Scraper:
                 head_path = os.path.join(path, f"{title}/{ep_title}/")
                 path = create_path(head_path)
             else:
+                head_path = os.path.join(path, f"{title}_{ep_title}.cbz")
                 path = create_path(path)
+
+                if os.path.exists(head_path):
+                    log.warning(f"File already exists: {head_path}")
+
+                file = ZipFile(head_path, "a", zipfile.ZIP_DEFLATED, False)
 
             for page, url in enumerate(episode):
                 output = os.path.join(
@@ -524,16 +531,18 @@ class Scraper:
                     page_num := pad_string(str(page + 1), length=self.zeropad)
                 )
 
-                if os.path.exists(file_name := f"{output}.{self.format}"):
+                if not self.archive and os.path.exists(file_name := f"{output}.{self.format}"):
                     log.debug(f"File already exists: {file_name}")
+                elif self.archive and (img_name := f"{page_num}.{self.format}") in file.namelist():
+                    log.debug(f"File already exists: {img_name}")
                 else:
                     if self.archive:
-                        fetch = threading.Thread(
+                        fetch = Thread(
                             target=self.compress,
-                            args=(url, seed, page_num, path, title, ep_title)
+                            args=(url, seed, img_name, file)
                         )
                     else:
-                        fetch = threading.Thread(
+                        fetch = Thread(
                             target=self.download,
                             args=(url, seed, output)
                         )
