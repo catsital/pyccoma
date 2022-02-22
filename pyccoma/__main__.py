@@ -222,7 +222,7 @@ def construct_parser() -> argparse.ArgumentParser:
         default="episode",
         help="""
         Arguments to include when parsing your library: is_purchased, is_free,
-        is_zero_plus, is_already_read, is_limited_read, is_limited_free
+        is_zero_plus, is_already_read, is_read_for_free, is_wait_for_free
         """
     )
     filter.add_argument(
@@ -231,7 +231,7 @@ def construct_parser() -> argparse.ArgumentParser:
         default="",
         help="""
         Arguments to exclude when parsing your library: is_purchased, is_free,
-        is_zero_plus, is_already_read, is_limited_read, is_limited_free
+        is_zero_plus, is_already_read, is_read_for_free, is_wait_for_free
         """
     )
 
@@ -297,9 +297,7 @@ def fetch(
                 range = (0, 0)
 
             if exclude:
-                exclude = " {0}not ({1})".format(
-                    "and " if include else "", exclude
-                )
+                exclude = f" {'and ' if include else ''}not ({exclude})"
 
             product = []
 
@@ -315,13 +313,9 @@ def fetch(
             elif 'max' in mode:
                 product = [episode[-1] for episode in product if episode]
             elif 'all' in mode:
-                product = list(
-                    chain.from_iterable(product)
-                )
+                product = list(chain.from_iterable(product))
             elif 'custom' in mode:
-                product = list(
-                    chain.from_iterable(product)
-                )[range[0]:range[1]]
+                product = list(chain.from_iterable(product))[range[0]:range[1]]
             else:
                 raise ValueError
 

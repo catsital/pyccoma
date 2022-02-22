@@ -2,8 +2,9 @@
 
 [![Downloads](https://pepy.tech/badge/pyccoma/week)](https://pepy.tech/project/pyccoma)
 [![Latest GitHub release](https://img.shields.io/github/tag/catsital/pyccoma.svg)](https://github.com/catsital/pyccoma/releases/latest)
+[![Latest PyPI release](https://img.shields.io/pypi/v/pyccoma)](https://pypi.org/project/pyccoma/)
 [![License](https://badgen.net/github/license/catsital/pyccoma)](https://github.com/catsital/pyccoma/blob/main/LICENSE)
-[![Publish](https://github.com/catsital/pyccoma/actions/workflows/python-publish.yml/badge.svg)](https://github.com/catsital/pyccoma/actions/workflows/python-publish.yml)
+
 
 Directly scrape images from [Piccoma](https://piccoma.com).
 
@@ -82,7 +83,7 @@ Images are stored under the path specified in `fetch(url, path)`. A fixed direct
 
 ## Usage
 
-### Using filter to aggregate and download in batch
+### Using `filter` to aggregate and download in batch
 
 * Downloading all free episodes in a single product page:
 
@@ -105,7 +106,7 @@ $ pyccoma https://piccoma.com/web/product/6575/episodes?etype=E https://piccoma.
 * Downloading all free volumes across multiple products offered on a [campaign](https://piccoma.com/web/event_list):
 
 ```bash
-$ pyccoma https://piccoma.com/web/product/6342/episodes?etype=V https://piccoma.com/web/product/4708/episodes?etype=V --filter all --include is_limited_free
+$ pyccoma https://piccoma.com/web/product/6342/episodes?etype=V https://piccoma.com/web/product/4708/episodes?etype=V --filter all --include is_wait_for_free
 ```
 
 * Downloading using custom with range:
@@ -113,6 +114,19 @@ $ pyccoma https://piccoma.com/web/product/6342/episodes?etype=V https://piccoma.
 ```bash
 $ pyccoma https://piccoma.com/web/product/16070/episodes?etype=E --filter custom --range 1 5
 ```
+
+### Using `include` and `exclude`
+
+Use the `include` and `exclude` options in the command-line utility to narrow down which items are included in an aggregation.
+
+|         Argument         |                             Description                            |               Examples              |
+|--------------------------|--------------------------------------------------------------------|-------------------------------------|
+|       **is_free**        | Free-to-access volumes/episodes                                    | `¥0`                                |
+|   **is_wait_for_free**   | Episodes that can be accessed by waiting/using free pass           | `WEB待てば¥0`                        |
+|   **is_read_for_free**   | Episodes that are accessed using free pass                         | `閲覧期限 残り71時間`                 |
+|     **is_purchased**     | Purchased volumes/episodes                                         | `購入済み` (episode), `読む` (volume)|
+|     **is_zero_plus**     | Free-to-access episodes                                            | `¥0+`                               |
+|   **is_already_read**    | Items that have been accessed before; formatted as grayed-out rows |                                     |
 
 ### Accessing your library
 
@@ -127,31 +141,14 @@ $ pyccoma purchase --filter all --include is_purchased --email foo@bar.com
 * Downloading the most recent episodes you have read from your history:
 
 ```bash
-$ pyccoma history --filter max --include "is_limited_read|(is_already_read&is_free)" --email foo@bar.com
+$ pyccoma history --filter max --include "is_read_for_free|(is_already_read&is_free)" --email foo@bar.com
 ```
 
 * Downloading the latest unread episodes using free pass (if available) from your bookmarks:
 
 ```bash
-$ pyccoma bookmark --filter min --include is_limited_free --exclude is_already_read --email foo@bar.com
+$ pyccoma bookmark --filter min --include is_wait_for_free --exclude is_already_read --email foo@bar.com
 ```
-
-### Narrowing down the results
-
-You can set restrictive conditions using the include and exclude options in the command-line utility. These two options take in statuses as arguments. To have a clearer picture as to what these statuses correspond to, see figure below.
-
-![s_piccoma_web_episode_etypeE](https://user-images.githubusercontent.com/18095632/137633753-6959890c-c6ec-461e-8b15-7218ee47cbe7.png)
-
-| Episode  | `is_free` | `is_limited_free` | `is_limited_read` | `is_already_read` | `is_zero_plus` |`is_purchased` |
-|----------|-----------|-------------------|-------------------|-------------------|----------------|---------------|
-| 第1話 (1)| True      | False             | False             | True              | False          | False         |
-| 第1話 (2)| True      | False             | False             | True              | False          | False         |
-| 第2話 (1)| True      | False             | False             | True              | False          | False         |
-| 第2話 (2)| False     | True              | False             | True              | False          | False         |
-| 第3話 (1)| False     | False             | True              | True              | False          | False         |
-| 第3話 (2)| False     | False             | True              | True              | False          | False         |
-| 第4話 (1)| False     | False             | True              | True              | False          | False         |
-| 第4話 (2)| False     | True              | False             | False             | False          | False         |
 
 ## Options
 
@@ -190,9 +187,9 @@ You can set restrictive conditions using the include and exclude options in the 
 |-----------|--------------------------------------------------------|----------------------------------------------------------------|
 | --etype   | Preferred episode type to scrape manga, smartoon, and novel when scraping `history`, `bookmark`, `purchase`; takes in three arguments, the first one for manga, the second for smartoon, and the last one for novel  | `volume` to scrape for volumes, `episode` to scrape for episodes |
 | --filter  | Filter to use when scraping episodes from a product page or your library | `min`, `max`, `all`, or `custom` by defining --range. Use `min` to scrape for the first item, `max` for the last item, `all` to scrape all items, and `custom` to scrape for a specific index range |
-| --range   | Range to use when scraping episodes; takes in two arguments, start and end; will always override --filter to parse custom, if omitted or otherwise | `0 10` will scrape the first up to the ninth episode |
-| --include | Status arguments to include when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above](https://github.com/catsital/pyccoma#usage) | `is_purchased`, `is_free`, `is_zero_plus`, `is_already_read`, `is_limited_read`, `is_limited_free` |
-| --exclude | Status arguments to exclude when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above](https://github.com/catsital/pyccoma#usage) | `is_purchased`, `is_free`, `is_zero_plus`, `is_already_read`, `is_limited_read`, `is_limited_free` |
+| --range   | Range to use when scraping episodes; takes in two arguments, start and end; will always override --filter to parse custom, if omitted or otherwise | `0 10` will scrape the first up to the tenth episode |
+| --include | Status arguments to include when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above](https://github.com/catsital/pyccoma#usage) | `is_purchased`, `is_free`, `is_zero_plus`, `is_already_read`, `is_read_for_free`, `is_wait_for_free` |
+| --exclude | Status arguments to exclude when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above](https://github.com/catsital/pyccoma#usage) | `is_purchased`, `is_free`, `is_zero_plus`, `is_already_read`, `is_read_for_free`, `is_wait_for_free` |
 
 ### Logging
 

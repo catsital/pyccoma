@@ -229,10 +229,10 @@ class Scraper:
     ) -> Mapping[int, Dict[str, Union[str, bool]]]:
         try:
             url = self.get_valid_url(url, 1)
-            page = self.parse_page(url).xpath('//ul[@id = "js_episodeList"]')[0]
+            page = self.parse_page(url).xpath('//ul[@id="js_episodeList"]')[0]
             episode_title = [
                 title.text_content() for title in page.xpath(
-                    './/div[@class ="PCM-epList_title"]/h2'
+                    './/div[@class="PCM-epList_title"]/h2'
                 )
             ]
             episode_id = [id for id in page.xpath('./li/a/@data-episode_id')]
@@ -249,12 +249,12 @@ class Scraper:
                 id: {
                     'title': title,
                     'url': link,
-                    'is_free': True if _status.find_class('PCM-epList_status_free') else False,
-                    'is_zero_plus': True if _status.find_class('PCM-epList_status_zeroPlus') else False,
-                    'is_limited_read': True if _status.find_class('PCM-epList_status_waitfreeRead') else False,
-                    'is_already_read': True if _status.find_class('PCM-epList_read') else False,
-                    'is_limited_free': True if _status.find_class('PCM-epList_status_webwaitfree') else False,
-                    'is_purchased': True if _status.find_class('PCM-epList_status_buy') else False
+                    'is_free': True if _status.find_class('PCM-epList_status_free') else False,  # noqa:E501
+                    'is_zero_plus': True if _status.find_class('PCM-epList_status_zeroPlus') else False,  # noqa:E501
+                    'is_read_for_free': True if _status.find_class('PCM-epList_status_waitfreeRead') else False,  # noqa:E501
+                    'is_already_read': True if _status.find_class('PCM-epList_read') else False,  # noqa:E501
+                    'is_wait_for_free': True if _status.find_class('PCM-epList_status_webwaitfree') else False,  # noqa:E501
+                    'is_purchased': True if _status.find_class('PCM-epList_status_buy') else False  # noqa:E501
                 }
                 for id, title, link, _status in zip(
                     episode_id,
@@ -282,16 +282,16 @@ class Scraper:
     ) -> Mapping[int, Dict[str, Union[str, bool]]]:
         try:
             url = self.get_valid_url(url, 2)
-            page = self.parse_page(url).xpath('//ul[@id = "js_volumeList"]')[0]
+            page = self.parse_page(url).xpath('//ul[@id="js_volumeList"]')[0]
             volume_title = [
                 title.text_content() for title in page.xpath(
-                    './/div[@class ="PCM-prdVol_title"]//h2'
+                    './/div[@class="PCM-prdVol_title"]//h2'
                 )
             ]
             series_id = url.split('/')[-2]
             volume_id = [
-                [volume_id for volume_id in links.xpath('./a/@data-episode_id')]
-                for links in page.xpath('//div[@class ="PCM-prdVol_btns"]')
+                [id for id in links.xpath('./a/@data-episode_id')]
+                for links in page.xpath('//div[@class="PCM-prdVol_btns"]')
             ]
             volume_link = [
                 "https://piccoma.com/web/viewer/{0}/{1}"
@@ -305,11 +305,11 @@ class Scraper:
                 id + 1: {
                     'title': title,
                     'url': link,
-                    'is_free': True if _status.find_class('PCM-prdVol_freeBtn') else False,
-                    'is_limited_read': True if (_status.find_class('PCM-prdVol_readBtn') and _status.find_class('PCM-prdVol_campaign_free')) else False,
-                    'is_already_read': True if _status.find_class('PCM-volList_read') else False,
-                    'is_limited_free': True if _status.find_class('PCM-prdVol_campaign_free') else False,
-                    'is_purchased': True if _status.find_class('PCM-prdVol_readBtn') else False
+                    'is_free': True if _status.find_class('PCM-prdVol_freeBtn') else False,  # noqa:E501
+                    'is_read_for_free': True if (_status.find_class('PCM-prdVol_readBtn') and _status.find_class('PCM-prdVol_campaign_free')) else False,  # noqa:E501
+                    'is_already_read': True if _status.find_class('PCM-volList_read') else False,  # noqa:E501
+                    'is_wait_for_free': True if _status.find_class('PCM-prdVol_campaign_free') else False,  # noqa:E501
+                    'is_purchased': True if _status.find_class('PCM-prdVol_readBtn') else False  # noqa:E501
                 }
                 for id, (title, link, _status) in enumerate(
                     zip(
@@ -362,7 +362,7 @@ class Scraper:
     def get_bdata(self, url: str) -> Dict[str, str]:
         try:
             page = self.parse_page(url).xpath(
-                '//section[@class = "PCM-productTile"]'
+                '//section[@class="PCM-productTile"]'
             )[0]
             product_title = [
                 title.text for title in page.xpath('.//p//span') if title.text
@@ -376,7 +376,7 @@ class Scraper:
             ]
             product_link = [
                 base_url + url + "/episodes?etype="
-                for url in page.xpath('//a[@class = "PCM-product"]/@href')
+                for url in page.xpath('//a[@class="PCM-product"]/@href')
             ]
             items = {
                 title: link + type for title, link, type in zip(
@@ -405,7 +405,7 @@ class Scraper:
             pattern = r"(?<=:')[^']+(?=')"
             images = ["https:" + image for image in re.findall(pattern, page)]
             pdata = {
-                'title': (title if not self.omit_author else trunc_title(title)),
+                'title': title if not self.omit_author else trunc_title(title),
                 'ep_title': ep_title,
                 'img': images
             }
@@ -528,18 +528,18 @@ class Scraper:
             for page, url in enumerate(episode):
                 output = os.path.join(
                     path,
-                    page_num := pad_string(str(page + 1), length=self.zeropad)
+                    page := pad_string(str(page + 1), length=self.zeropad)
                 )
 
-                if not self.archive and os.path.exists(file_name := f"{output}.{self.format}"):
+                if not self.archive and os.path.exists(file_name := f"{output}.{self.format}"):  # noqa:E501
                     log.debug(f"File already exists: {file_name}")
-                elif self.archive and (img_name := f"{page_num}.{self.format}") in file.namelist():
-                    log.debug(f"File already exists: {img_name}")
+                elif self.archive and (file_name := f"{page}.{self.format}") in file.namelist():  # noqa:E501
+                    log.debug(f"File already exists: {file_name}")
                 else:
                     if self.archive:
                         fetch = Thread(
                             target=self.compress,
-                            args=(url, seed, img_name, file)
+                            args=(url, seed, file_name, file)
                         )
                     else:
                         fetch = Thread(

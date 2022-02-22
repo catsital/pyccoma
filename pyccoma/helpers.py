@@ -27,8 +27,8 @@ def create_path(path: str) -> str:
 
 def create_tags(text: str) -> str:
     identifiers = [
-        r'is_limited_read',
-        r"is_limited_free",
+        r'is_read_for_free',
+        r"is_wait_for_free",
         r"is_already_read",
         r"is_free",
         r"is_zero_plus",
