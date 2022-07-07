@@ -3,26 +3,38 @@
 import argparse
 
 import os
+import re
 import logging
 from getpass import getpass
 from typing import Optional, Tuple, List
 from itertools import chain
 
-from pyccoma.pyccoma import Scraper
+from pyccoma.jp.pyccoma import Pyccoma as Jp
+from pyccoma.fr.pyccoma import Pyccoma as Fr
 from pyccoma.exceptions import PyccomaError
 from pyccoma.logger import setup_logging, levels
-from pyccoma.helpers import create_tags, valid_url
-from pyccoma.urls import history_url, bookmark_url, purchase_url
+from pyccoma.helpers import create_tags
 
 log = logging.getLogger(__name__)
-pyccoma = Scraper()
 
 
 def main() -> None:
     try:
+        global pyccoma, region
+
         setup_logging()
         parser = construct_parser()
         args = parser.parse_args()
+
+        region = args.region.lower()
+        
+        if region == 'jp':
+            pyccoma = Jp()
+        elif region == 'fr':
+            pyccoma = Fr()
+        else:
+            raise ValueError("Invalid country specified.")
+
         url = args.url
         pyccoma.format = args.format
         pyccoma.manga = args.etype[0]
@@ -61,19 +73,19 @@ def main() -> None:
 
         if args.url and args.filter:
             if args.url[0] in ('history', 'bookmark', 'purchase'):
-                if args.url[0] in history_url:
+                if args.url[0] in 'history':
                     url = pyccoma.get_history().values()
                     log.info(
                         f"Parsing ({len(url)}) titles from your history."
                     )
 
-                elif args.url[0] in bookmark_url:
+                elif args.url[0] in 'bookmark':
                     url = pyccoma.get_bookmark().values()
                     log.info(
                         f"Parsing ({len(url)}) titles from your bookmarks."
                     )
 
-                elif args.url[0] in purchase_url:
+                elif args.url[0] in 'purchase':
                     url = pyccoma.get_purchase().values()
                     log.info(
                         f"Parsing ({len(url)}) titles from your purchases."
@@ -165,6 +177,14 @@ def construct_parser() -> argparse.ArgumentParser:
         help="Omit author(s) in title naming scheme."
     )
 
+    locale = parser.add_argument_group("Locale options")
+    locale.add_argument(
+        "--region",
+        type=str,
+        default="Jp",
+        help="Select which Piccoma service to use. (Default: Jp)"
+    )
+
     retry = parser.add_argument_group("Retry options")
     retry.add_argument(
         "--retry-count",
@@ -222,7 +242,7 @@ def construct_parser() -> argparse.ArgumentParser:
         default="episode",
         help="""
         Arguments to include when parsing your library: is_purchased, is_free,
-        is_zero_plus, is_already_read, is_read_for_free, is_wait_for_free
+        is_zero_plus, is_already_read, is_read_for_free, is_wait_until_free
         """
     )
     filter.add_argument(
@@ -231,7 +251,7 @@ def construct_parser() -> argparse.ArgumentParser:
         default="",
         help="""
         Arguments to exclude when parsing your library: is_purchased, is_free,
-        is_zero_plus, is_already_read, is_read_for_free, is_wait_for_free
+        is_zero_plus, is_already_read, is_read_for_free, is_wait_until_free
         """
     )
 
@@ -257,7 +277,7 @@ def construct_parser() -> argparse.ArgumentParser:
         "-v", "--version",
         action="version",
         help="Show program version.",
-        version="%(prog)s 0.4.2"
+        version="%(prog)s 0.5.0"
     )
 
     return parser
@@ -281,6 +301,36 @@ def exclude(value: str) -> str:
         raise argparse.ArgumentTypeError(
             'Specify type in this format: "is_free&is_already_read"'
         )
+
+
+def valid_url(url: str, level: Optional[int] = None) -> bool:
+    if region == 'jp':
+        base_url = r"(http|https)://(|www.)(|jp.)piccoma.com/web"
+        urls = [
+            base_url + r"/product/([0-9\-]+)/episodes\?etype\=([eE|vV]+)",
+            base_url + r"/product/([0-9\-]+)/episodes\?etype\=([eE]+)",
+            base_url + r"/product/([0-9\-]+)/episodes\?etype\=([vV]+)",
+            base_url + r"/viewer/(|s/)([0-9]+)/([0-9]+)",
+            base_url + r"/bookshelf/|(bookmark|history|purchase)"
+        ]
+    elif region == 'fr':
+        base_url = r"(http|https)://(|www.)(|fr.)piccoma.com/fr"
+        urls = [
+            base_url + r"/product/([episode|volume]+)/([0-9\-]+)",
+            base_url + r"/product/episode/([0-9\-]+)",
+            base_url + r"/product/volume/([0-9\-]+)",
+            base_url + r"/viewer/([0-9]+)/([0-9]+)",
+            base_url + r"/bookshelf/|(bookmark|history|purchase)"
+        ]
+    else:
+        raise ValueError("Invalid input.")
+
+    if not level:
+        urls = "|".join(urls)
+        regex = re.search(urls, url)
+    else:
+        regex = re.search(urls[level], url)
+    return bool(regex)
 
 
 def fetch(

@@ -1,0 +1,6 @@
+base_url = 'https://piccoma.com/fr'
+login_url = base_url + '/api/auth/signin'
+api_url = base_url + '/_next/data/%s/fr'
+history_url = '%s/bookshelf/history.json'
+bookmark_url = '%s/bookshelf/bookmark.json'
+purchase_url = '%s/bookshelf/purchase.json'
