@@ -1,0 +1,1 @@
+from pyccoma.jp.pyccoma import Pyccoma

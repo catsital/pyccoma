@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+
 from typing import Optional
 
 log = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ def create_path(path: str) -> str:
 def create_tags(text: str) -> str:
     identifiers = [
         r'is_read_for_free',
-        r"is_wait_for_free",
+        r"is_wait_until_free",
         r"is_already_read",
         r"is_free",
         r"is_zero_plus",
@@ -56,20 +57,3 @@ def pad_string(
             padding += "0"
         text = f"{padding}{text}"
     return text
-
-
-def valid_url(url: str, level: Optional[int] = None) -> bool:
-    base_url = r"(http|https)://(|www.)piccoma.com/web"
-    urls = [
-        base_url + r"/product/([0-9\-]+)/episodes\?etype\=([eE|vV]+)",
-        base_url + r"/product/([0-9\-]+)/episodes\?etype\=([eE]+)",
-        base_url + r"/product/([0-9\-]+)/episodes\?etype\=([vV]+)",
-        base_url + r"/viewer/(|s/)([0-9]+)/([0-9]+)",
-        base_url + r"/bookshelf/|(bookmark|history|purchase)"
-    ]
-    if not level:
-        urls = "|".join(urls)
-        regex = re.search(urls, url)
-    else:
-        regex = re.search(urls[level], url)
-    return bool(regex)
