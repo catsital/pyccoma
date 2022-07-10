@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 
 def safe_filename(title: str) -> str:
     pattern = re.compile(r'[?"|:<>*/\\]', flags=re.VERBOSE)
-    return pattern.sub("", str(title))
+    return pattern.sub("", str(title)).strip()
 
 
 def create_path(path: str) -> str:

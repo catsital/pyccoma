@@ -7,14 +7,14 @@ requirements = [
     "lxml>=4.7.1",
     "requests==2.26.0",
     "image-scramble==2.0.1"
-    ]
+]
 
 setup(
     name="pyccoma",
-    version="0.5.0",
+    version="0.5.1",
     author="catsital",
     author_email="catshital@gmail.com",
-    description="Scrape and download from Piccoma.",
+    description="Scrape and download from Piccoma Japan and France.",
     entry_points={"console_scripts": ["pyccoma=pyccoma.__main__:main"],},
     install_requires=requirements,
     long_description=long_description,

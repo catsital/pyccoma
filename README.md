@@ -9,6 +9,9 @@ Directly download smartoon, manga, and novels from [Piccoma Japan](https://jp.pi
 
 ![pyccoma](https://user-images.githubusercontent.com/18095632/177802537-1698ba0a-266c-4ff7-b4ae-d288c68de2b1.gif)
 
+## Prerequisites
+* Python 3.8+
+
 ## Install
 
 ```bash
@@ -25,13 +28,13 @@ To download a single episode, simply use:
 $ pyccoma https://piccoma.com/web/viewer/103981/2646730
 ```
 
-You can also pass multiple links (separated by whitespace) to download in one go and use the **--archive** option to output to a cbz archive:
+You can also pass multiple links (separated by whitespace) to download in one go, then use the **--archive** option to output to a cbz archive.
 
 ```bash
 $ pyccoma https://piccoma.com/web/viewer/60171/1575237 https://piccoma.com/web/viewer/8195/1185884 --archive
 ```
 
-Use the option **--region** to switch between Piccoma Japan (default) or Piccoma France.
+Use the option **--region** to switch between Piccoma Japan (default) and Piccoma France.
 
 ```bash
 $ pyccoma https://piccoma.com/fr/viewer/49/2946 --region fr
@@ -40,11 +43,11 @@ $ pyccoma https://piccoma.com/fr/viewer/49/2946 --region fr
 Access purchased episodes from your library by logging in using the **--email** option.
 
 ```bash
-$ pyccoma bookmark --region fr --filter all --include is_free --email foo@bar.com
+$ pyccoma purchase --region fr --filter all --include is_purchased --email foo@bar.com
 $ pyccoma purchase --region jp --filter all --include is_purchased --email foo@bar.com
 ```
 
-Read more about the available CLI options on [the next section](https://github.com/catsital/pyccoma#options) below. Also, see more examples [here](https://github.com/catsital/pyccoma#examples) on how to aggregate and batch download using the command-line utility.
+Read more about the available CLI options on [the next section](https://github.com/catsital/pyccoma#options) below. You can also see more examples [here](https://github.com/catsital/pyccoma#examples) on how to aggregate and batch download using the command-line utility.
 
 ### Using Python shell
 
@@ -101,7 +104,7 @@ Elapsed time: 00:00:23
 
 |     Option     |                Description                   |                  Examples                   |
 |----------------|----------------------------------------------|---------------------------------------------|
-|   --region     | Select which service to use.                 | `Jp` (Piccoma Japan), `Fr` (Piccoma France) |
+|   --region     | Select which service to use                  | `Jp` (Piccoma Japan), `Fr` (Piccoma France) |
 
 ### Optional
 
@@ -133,8 +136,8 @@ Elapsed time: 00:00:23
 | --etype   | Preferred episode type to scrape manga, smartoon, and novel when scraping `history`, `bookmark`, `purchase`; takes in three arguments, the first one for manga, the second for smartoon, and the last one for novel  | `volume` to scrape for volumes, `episode` to scrape for episodes |
 | --filter  | Filter to use when scraping episodes from a product page or your library | `min`, `max`, `all`, or `custom` by defining --range. Use `min` to scrape for the first item, `max` for the last item, `all` to scrape all items, and `custom` to scrape for a specific index range |
 | --range   | Range to use when scraping episodes; takes in two arguments, start and end; will always override --filter to parse custom, if omitted or otherwise | `0 10` will scrape the first up to the tenth episode |
-| --include | Status arguments to include when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above](https://github.com/catsital/pyccoma#usage) | `is_purchased`, `is_free`, `is_zero_plus`, `is_already_read`, `is_read_for_free`, `is_wait_until_free` |
-| --exclude | Status arguments to exclude when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases above](https://github.com/catsital/pyccoma#usage) | `is_purchased`, `is_free`, `is_zero_plus`, `is_already_read`, `is_read_for_free`, `is_wait_until_free` |
+| --include | Status arguments to include when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases below](https://github.com/catsital/pyccoma#examples) | `is_purchased`, `is_free`, `is_zero_plus`, `is_already_read`, `is_read_for_free`, `is_wait_until_free` |
+| --exclude | Status arguments to exclude when parsing a library or product; can parse in `\|` and `&` operators as conditionals, see [use cases below](https://github.com/catsital/pyccoma#examples) | `is_purchased`, `is_free`, `is_zero_plus`, `is_already_read`, `is_read_for_free`, `is_wait_until_free` |
 
 ### Logging
 

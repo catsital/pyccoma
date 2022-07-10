@@ -5,10 +5,11 @@ import logging
 import requests
 from urllib.parse import parse_qs
 from typing import Mapping, Union, Dict
-from functools import lru_cache
 
+from pyccoma import Scraper
 from pyccoma.exceptions import PyccomaError, PageError, LoginError
-from pyccoma.helpers import safe_filename, trunc_title
+from pyccoma.helpers import trunc_title
+
 from pyccoma.fr.urls import (
     base_url,
     login_url,
@@ -17,8 +18,6 @@ from pyccoma.fr.urls import (
     bookmark_url,
     purchase_url,
 )
-
-from pyccoma import Scraper
 
 log = logging.getLogger(__name__)
 
@@ -84,7 +83,7 @@ class Pyccoma(Scraper):
             log.error("Failed to parse page.")
 
     def get_api_url(self) -> str:
-        page = self.parse_page(base_url).xpath('//script[@id = "__NEXT_DATA__"]/text()')[0]
+        page = self.parse_page(base_url).xpath('//script[@id = "__NEXT_DATA__"]/text()')[0]  # noqa:E501
         build_id = json.loads(page)['buildId']
         new_api_url = api_url % build_id
         return new_api_url
@@ -135,18 +134,18 @@ class Pyccoma(Scraper):
                 raise ValueError("Invalid url.")
 
             product_id = url.split("/")[-1]
-            url = self.api_url + f"/product/{type}/{product_id}.json?id={product_id}&pathname=%2Fproduct%2F%5Bid%5D"
-            page = self.parse_json(url)['pageProps']['initialState']['episode']['episodeList']['episode_list']
+            url = self.api_url + f"/product/{type}/{product_id}.json?id={product_id}&pathname=%2Fproduct%2F%5Bid%5D"  # noqa:E501
+            page = self.parse_json(url)['pageProps']['initialState']['episode']['episodeList']['episode_list']  # noqa:E501
                 
             episodes = {
                 id + 1: {
                     'title': episode['title'],
-                    'url': f"{base_url}/viewer/{product_id}/{episode['id']}",
-                    'is_free': True if 'FR01' in episode['use_type'] else False,
-                    'is_read_for_free': True if 'RD01' in episode['use_type'] else False,
-                    'is_wait_for_free': True if 'WF15' in episode['use_type'] else False,
-                    'is_purchased': True if 'AB01' in episode['use_type'] else False,
-                    'is_already_read': episode['is_read'] if self._is_login else False,
+                    'url': f"{base_url}/viewer/{product_id}/{episode['id']}",  # noqa:E501
+                    'is_free': True if 'FR01' in episode['use_type'] else False,  # noqa:E501
+                    'is_read_for_free': True if 'RD01' in episode['use_type'] else False,  # noqa:E501
+                    'is_wait_for_free': True if 'WF15' in episode['use_type'] else False,  # noqa:E501
+                    'is_purchased': True if 'AB01' in episode['use_type'] else False,  # noqa:E501
+                    'is_already_read': episode['is_read'] if self._is_login else False,  # noqa:E501
                 }
                 for id, episode in enumerate(page)
             }
@@ -199,7 +198,7 @@ class Pyccoma(Scraper):
             page = self.parse_json(url)['pageProps']['initialState']
 
             authors = ' '.join([author['name'] for author in page['productDetail']['productDetail']['product']['authors']])  # noqa:E501
-            title = safe_filename(page['productDetail']['productDetail']['product']['title']) + f" ({authors})"  # noqa:E501
+            title = page['productDetail']['productDetail']['product']['title'] + f" ({authors})"  # noqa:E501
             images = [episode['path'] for episode in page['viewer']['pData']['img']]  # noqa:E501
 
             pdata = {

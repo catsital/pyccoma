@@ -19,16 +19,9 @@ from functools import lru_cache
 
 from pycasso import Canvas
 
-from pyccoma.exceptions import PyccomaError, PageError, LoginError
-
-from pyccoma.helpers import (
-    create_path,
-    pad_string
-)
-from pyccoma.utils import (
-    display_progress_bar,
-    retry
-)
+from pyccoma.exceptions import PyccomaError, PageError
+from pyccoma.helpers import create_path, pad_string, safe_filename
+from pyccoma.utils import display_progress_bar, retry
 
 log = logging.getLogger(__name__)
 
@@ -248,6 +241,8 @@ class Scraper(metaclass=ABCMeta):
             checksum = self.get_checksum(episode[0])
             key = self.get_key(episode[0])
             seed = self.get_seed(checksum, key)
+            title = safe_filename(title)
+            ep_title = safe_filename(ep_title)
 
             if not self.archive:
                 head_path = os.path.join(path, f"{title}/{ep_title}/")

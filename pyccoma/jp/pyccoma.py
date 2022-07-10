@@ -5,8 +5,10 @@ import logging
 
 from typing import Mapping, Union, Dict
 
+from pyccoma import Scraper
 from pyccoma.exceptions import PyccomaError, PageError, LoginError
-from pyccoma.helpers import safe_filename, trunc_title
+from pyccoma.helpers import trunc_title
+
 from pyccoma.jp.urls import (
     base_url,
     login_url,
@@ -14,8 +16,6 @@ from pyccoma.jp.urls import (
     bookmark_url,
     purchase_url,
 )
-
-from pyccoma import Scraper
 
 log = logging.getLogger(__name__)
 
@@ -252,9 +252,7 @@ class Pyccoma(Scraper):
 
             log.info(f"Parsing data from {url}")
 
-            title = safe_filename(
-                page.xpath('//title')[0].text_content().split("｜")[1]
-            )
+            title = page.xpath('//title')[0].text_content().split("｜")[1]
 
             page = page.xpath('//script[contains(text(), "pdata")]/text()')[0]
             ep_title = page.split("'title'")[1].split("'")[1].strip()
