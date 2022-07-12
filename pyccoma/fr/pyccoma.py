@@ -47,7 +47,7 @@ class Pyccoma(Scraper):
     @property
     def novel(self) -> str:
         return self._etype['novel']
-    
+
     @manga.setter
     def manga(self, value: str) -> None:
         if value in ('volume', 'episode'):
@@ -119,7 +119,7 @@ class Pyccoma(Scraper):
         try:
             return self.get_episode_list(url)
         except Exception:
-            raise PageError(url)      
+            raise PageError(url)
 
     def get_episode_list(
         self,
@@ -136,14 +136,14 @@ class Pyccoma(Scraper):
             product_id = url.split("/")[-1]
             url = self.api_url + f"/product/{type}/{product_id}.json?id={product_id}&pathname=%2Fproduct%2F%5Bid%5D"  # noqa:E501
             page = self.parse_json(url)['pageProps']['initialState']['episode']['episodeList']['episode_list']  # noqa:E501
-                
+
             episodes = {
                 id + 1: {
                     'title': episode['title'],
                     'url': f"{base_url}/viewer/{product_id}/{episode['id']}",  # noqa:E501
                     'is_free': True if 'FR01' in episode['use_type'] else False,  # noqa:E501
                     'is_read_for_free': True if 'RD01' in episode['use_type'] else False,  # noqa:E501
-                    'is_wait_for_free': True if 'WF15' in episode['use_type'] else False,  # noqa:E501
+                    'is_wait_until_free': True if 'WF15' in episode['use_type'] else False,  # noqa:E501
                     'is_purchased': True if 'AB01' in episode['use_type'] else False,  # noqa:E501
                     'is_already_read': episode['is_read'] if self._is_login else False,  # noqa:E501
                 }
@@ -183,9 +183,9 @@ class Pyccoma(Scraper):
                 episode['title']: f"{base_url}/product/{etype}/{episode['id']}"
                 for episode, etype in zip(page, product_type)
             }
-            
+
             return items
-        
+
         except Exception:
             log.error("Failed to parse library.")
 

@@ -27,7 +27,7 @@ def main() -> None:
         args = parser.parse_args()
 
         region = args.region.lower()
-        
+
         if region == 'jp':
             pyccoma = Jp()
         elif region == 'fr':
@@ -277,7 +277,7 @@ def construct_parser() -> argparse.ArgumentParser:
         "-v", "--version",
         action="version",
         help="Show program version.",
-        version="%(prog)s 0.5.1"
+        version="%(prog)s 0.5.2"
     )
 
     return parser

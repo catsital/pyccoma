@@ -40,7 +40,7 @@ class Pyccoma(Scraper):
     @property
     def novel(self) -> str:
         return self._etype['novel']
-    
+
     @manga.setter
     def manga(self, value: str) -> None:
         if value in ('volume', 'episode'):
@@ -60,7 +60,7 @@ class Pyccoma(Scraper):
         if value in ('volume', 'episode'):
             self._etype['novel'] = value.upper()[0]
         else:
-            raise ValueError("Invalid type.") 
+            raise ValueError("Invalid type.")
 
     def get_login_status(self) -> bool:
         is_login = self.parse_page(login_url).xpath(
@@ -139,7 +139,7 @@ class Pyccoma(Scraper):
                     'is_zero_plus': True if _status.find_class('PCM-epList_status_zeroPlus') else False,  # noqa:E501
                     'is_read_for_free': True if _status.find_class('PCM-epList_status_waitfreeRead') else False,  # noqa:E501
                     'is_already_read': True if _status.find_class('PCM-epList_read') else False,  # noqa:E501
-                    'is_wait_for_free': True if _status.find_class('PCM-epList_status_webwaitfree') else False,  # noqa:E501
+                    'is_wait_until_free': True if _status.find_class('PCM-epList_status_webwaitfree') else False,  # noqa:E501
                     'is_purchased': True if _status.find_class('PCM-epList_status_buy') else False  # noqa:E501
                 }
                 for id, title, link, _status in zip(
@@ -193,7 +193,7 @@ class Pyccoma(Scraper):
                     'is_free': True if _status.find_class('PCM-prdVol_freeBtn') else False,  # noqa:E501
                     'is_read_for_free': True if (_status.find_class('PCM-prdVol_readBtn') and _status.find_class('PCM-prdVol_campaign_free')) else False,  # noqa:E501
                     'is_already_read': True if _status.find_class('PCM-volList_read') else False,  # noqa:E501
-                    'is_wait_for_free': True if _status.find_class('PCM-prdVol_campaign_free') else False,  # noqa:E501
+                    'is_wait_until_free': True if _status.find_class('PCM-prdVol_campaign_free') else False,  # noqa:E501
                     'is_purchased': True if _status.find_class('PCM-prdVol_readBtn') else False  # noqa:E501
                 }
                 for id, (title, link, _status) in enumerate(
