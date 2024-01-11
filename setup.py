@@ -15,6 +15,7 @@ setup(
     author="catsital",
     author_email="catshital@gmail.com",
     description="Scrape and download from Piccoma Japan and France.",
+    python_requires=">=3.11, <3.12",
     entry_points={"console_scripts": ["pyccoma=pyccoma.__main__:main"],},
     install_requires=requirements,
     long_description=long_description,

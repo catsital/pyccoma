@@ -33,7 +33,7 @@ def main() -> None:
         elif region == 'fr':
             pyccoma = Fr()
         else:
-            raise ValueError("Invalid country specified.")
+            raise ValueError("Invalid region specified.")
 
         url = args.url
         pyccoma.format = args.format
@@ -277,7 +277,7 @@ def construct_parser() -> argparse.ArgumentParser:
         "-v", "--version",
         action="version",
         help="Show program version.",
-        version="%(prog)s 0.5.2"
+        version="%(prog)s 0.6.0"
     )
 
     return parser
