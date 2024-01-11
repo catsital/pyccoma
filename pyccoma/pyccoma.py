@@ -22,6 +22,7 @@ from pycasso import Canvas
 from pyccoma.exceptions import PyccomaError, PageError
 from pyccoma.helpers import create_path, pad_string, safe_filename
 from pyccoma.utils import display_progress_bar, retry
+from pyccoma.dd import dd
 
 log = logging.getLogger(__name__)
 
@@ -120,7 +121,7 @@ class Scraper(metaclass=ABCMeta):
             raise PageError(url)
         except Exception:
             log.error("Failed to parse page.")
-    
+
     @abstractmethod
     def login(self, email: str, password: str) -> None:
         pass
@@ -157,7 +158,7 @@ class Scraper(metaclass=ABCMeta):
             img = self.get_img(img_url)
 
             if seed.isupper():
-                Canvas(img.raw, (50, 50), seed).export(
+                Canvas(img.raw, (50, 50), dd(seed)).export(
                     mode="scramble",
                     path=output,
                     format=self.format
@@ -184,7 +185,7 @@ class Scraper(metaclass=ABCMeta):
             img = self.get_img(img_url)
 
             if seed.isupper():
-                img = Canvas(img.raw, (50, 50), seed).export(
+                img = Canvas(img.raw, (50, 50), dd(seed)).export(
                     mode="scramble",
                     format=self.format
                 )
@@ -199,7 +200,7 @@ class Scraper(metaclass=ABCMeta):
             log.error(f"Unable to download image. {err}")
         except KeyboardInterrupt:
             pass
-        
+
     def fetch(self, url: str, path: Optional[str] = None) -> None:
         try:
             pdata = self.get_pdata(url)
@@ -287,7 +288,7 @@ class Scraper(metaclass=ABCMeta):
             log.error(f"Unable to fetch episode. {err}")
         except KeyboardInterrupt:
             pass
-    
+
     @abstractmethod
     def get_checksum(img_url: str) -> str:
         pass

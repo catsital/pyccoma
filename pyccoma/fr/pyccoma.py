@@ -83,10 +83,13 @@ class Pyccoma(Scraper):
             log.error("Failed to parse page.")
 
     def get_api_url(self) -> str:
-        page = self.parse_page(base_url).xpath('//script[@id = "__NEXT_DATA__"]/text()')[0]  # noqa:E501
-        build_id = json.loads(page)['buildId']
-        new_api_url = api_url % build_id
-        return new_api_url
+        try:
+            page = self.parse_page(base_url).xpath('//script[@id = "__NEXT_DATA__"]/text()')[0]  # noqa:E501
+            build_id = json.loads(page)['buildId']
+            new_api_url = api_url % build_id
+            return new_api_url
+        except IndexError:
+            raise PageError(base_url)
 
     def login(self, email: str, password: str) -> None:
         try:

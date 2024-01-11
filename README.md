@@ -10,7 +10,7 @@ Directly download smartoon, manga, and novels from [Piccoma Japan](https://jp.pi
 ![pyccoma](https://user-images.githubusercontent.com/18095632/177802537-1698ba0a-266c-4ff7-b4ae-d288c68de2b1.gif)
 
 ## Prerequisites
-* Python 3.8+
+* Python 3.11+
 
 ## Install
 
@@ -184,22 +184,6 @@ $ pyccoma https://piccoma.com/web/product/6575/episodes?etype=E https://piccoma.
 $ pyccoma https://piccoma.com/web/product/16070/episodes?etype=E --filter custom --range 1 5
 ```
 
-
-### Accessing your library
-
-**Requires user login.**
-
-* Downloading the most recent episodes you have read from your history:
-
-```bash
-$ pyccoma history --filter max --include "is_read_for_free|(is_already_read&is_free)" --email foo@bar.com
-```
-
-* Downloading the latest unread episodes using free pass (if available) from your bookmarks:
-
-```bash
-$ pyccoma bookmark --filter min --include is_wait_until_free --exclude is_already_read --email foo@bar.com
-```
 ## Disclaimer
 
 Pyccoma was made for the sole purpose of helping users download media from [Piccoma](https://piccoma.com) for offline consumption. This is for private use only, do not use this tool to promote piracy.
