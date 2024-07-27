@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import re
+import json
 import logging
 
 from typing import Mapping, Union, Dict
@@ -15,6 +16,7 @@ from pyccoma.jp.urls import (
     history_url,
     bookmark_url,
     purchase_url,
+    product_url
 )
 
 log = logging.getLogger(__name__)
@@ -71,12 +73,12 @@ class Pyccoma(Scraper):
     def login(self, email: str, password: str) -> None:
         try:
             session = self.session.get(login_url, headers=self.headers)
-            csrf = self.parse(session.text).xpath(
+            self.csrf = self.parse(session.text).xpath(
                 f'//input[@name = "csrfmiddlewaretoken"]/@value'
             )
 
             params = {
-                'csrfmiddlewaretoken': csrf,
+                'csrfmiddlewaretoken': self.csrf,
                 'next_url': '/web/',
                 'email': email,
                 'password': password
@@ -217,33 +219,47 @@ class Pyccoma(Scraper):
         except Exception as err:
             raise PyccomaError(err)
 
-    def get_bdata(self, url: str) -> Dict[str, str]:
+    def get_bdata(self, url: str, shelf: str) -> Dict[str, str]:
         try:
             page = self.parse_page(url).xpath(
-                '//section[@class="PCM-productTile"]'
+                '//script[contains(.,"history")]/text()'
             )[0]
-            product_title = [
-                title.text for title in page.xpath('.//p//span') if title.text
-            ]
+            bad_json = page.split("_init_.data =")[1].split("_init_.gtm")[0]
+            corrected_json = re.sub(r'(?<!["\'])\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?=\s*:)', r'"\1"', bad_json)
+            data = json.loads(corrected_json)
+            product_id = [value["id"] for value in data[shelf]]
+            product_id = ','.join([str(value["id"]) for value in data[shelf]])
+
+            params = {
+                'csrfmiddlewaretoken': self.csrf,
+                'products': product_id
+            }
+
+            product_json = self.session.post(product_url, data=params, headers=self.headers).content
+            product = json.loads(product_json)['data']['products']
+
+            product_title = [_title['title'] for _title in product]
+
             product_type = [
-                self.smartoon if 'PCM-stt_smartoon' in _type else
-                self.novel if 'PCM-stt_novel' in _type else self.manga
-                for _type in [
-                    type.classes for type in page.xpath('.//li')
-                ]
+                self.smartoon if _type['smartoon'] else
+                self.novel if _type['novel'] else self.manga
+                for _type in product
             ]
+
             product_link = [
-                base_url + url + "/episodes?etype="
-                for url in page.xpath('//a[@class="PCM-product"]/@href')
+                base_url + "/web/product/" + str(_id['id']) + "/episodes?etype="
+                for _id in product
             ]
+
             items = {
                 title: link + type for title, link, type in zip(
                     product_title, product_link, product_type
                 )
             }
+
             return items
 
-        except Exception:
+        except Exception as e:
             log.error("Failed to parse library.")
 
     def get_pdata(self, url: str) -> Dict[str, Union[str, bool]]:
@@ -275,18 +291,18 @@ class Pyccoma(Scraper):
 
     def get_history(self) -> Dict[str, str]:
         if self._is_login:
-            return self.get_bdata(history_url)
+            return self.get_bdata(history_url, "history")
         else:
             raise LoginError
 
     def get_bookmark(self) -> Dict[str, str]:
         if self._is_login:
-            return self.get_bdata(bookmark_url)
+            return self.get_bdata(bookmark_url, "bookmark")
         else:
             raise LoginError
 
     def get_purchase(self) -> Dict[str, str]:
         if self._is_login:
-            return self.get_bdata(purchase_url)
+            return self.get_bdata(purchase_url, "purchase")
         else:
             raise LoginError

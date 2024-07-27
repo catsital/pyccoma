@@ -2,6 +2,6 @@
 # flake8: noqa: F401
 
 __project__ = "pyccoma"
-__version__ = "0.6.1"
+__version__ = "0.7.0"
 
 from .pyccoma import Scraper

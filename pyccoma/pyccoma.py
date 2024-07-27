@@ -45,6 +45,7 @@ class Scraper(metaclass=ABCMeta):
         self._retry_count = 3
         self._retry_interval = 1
         self._zeropad = 0
+        self.csrf = ''
 
     @property
     def format(self) -> str:
@@ -104,6 +105,7 @@ class Scraper(metaclass=ABCMeta):
     @_is_login.setter
     def _is_login(self, value: bool) -> None:
         self.__is_login = value
+
 
     def parse(self, page: str) -> html:
         return html.fromstring(page)
