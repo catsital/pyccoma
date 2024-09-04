@@ -45,7 +45,6 @@ class Scraper(metaclass=ABCMeta):
         self._retry_count = 3
         self._retry_interval = 1
         self._zeropad = 0
-        self.csrf = ''
 
     @property
     def format(self) -> str:

@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 class Pyccoma(Scraper):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.csrf = None
         self._etype = {
             "manga": "V",
             "smartoon": "E",
@@ -222,7 +223,7 @@ class Pyccoma(Scraper):
     def get_bdata(self, url: str, shelf: str) -> Dict[str, str]:
         try:
             page = self.parse_page(url).xpath(
-                '//script[contains(.,"history")]/text()'
+                '//script[contains(.,"_init_.api")]/text()'
             )[0]
             bad_json = page.split("_init_.data =")[1].split("_init_.gtm")[0]
             corrected_json = re.sub(r'(?<!["\'])\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?=\s*:)', r'"\1"', bad_json)
@@ -241,8 +242,8 @@ class Pyccoma(Scraper):
             product_title = [_title['title'] for _title in product]
 
             product_type = [
-                self.smartoon if _type['smartoon'] else
-                self.novel if _type['novel'] else self.manga
+                self.smartoon if _type['is_smartoon'] else
+                self.novel if _type['is_novel'] else self.manga
                 for _type in product
             ]
 
@@ -251,15 +252,15 @@ class Pyccoma(Scraper):
                 for _id in product
             ]
 
-            items = {
+            bdata = {
                 title: link + type for title, link, type in zip(
                     product_title, product_link, product_type
                 )
             }
 
-            return items
+            return bdata
 
-        except Exception as e:
+        except Exception:
             log.error("Failed to parse library.")
 
     def get_pdata(self, url: str) -> Dict[str, Union[str, bool]]:
