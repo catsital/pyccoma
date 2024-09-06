@@ -11,11 +11,11 @@ requirements = [
 
 setup(
     name="pyccoma",
-    version="0.7.1",
+    version="0.7.2",
     author="catsital",
     author_email="catshital@gmail.com",
     description="Scrape and download from Piccoma Japan and France.",
-    python_requires=">=3.11, <3.12",
+    python_requires=">=3.8",
     entry_points={"console_scripts": ["pyccoma=pyccoma.__main__:main"],},
     install_requires=requirements,
     long_description=long_description,

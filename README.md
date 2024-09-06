@@ -10,7 +10,7 @@ Directly download smartoon, manga, and novels from [Piccoma Japan](https://jp.pi
 ![pyccoma](https://user-images.githubusercontent.com/18095632/177802537-1698ba0a-266c-4ff7-b4ae-d288c68de2b1.gif)
 
 ## Prerequisites
-* Python 3.11
+* Python 3.8+
 
 ## Install
 
@@ -25,7 +25,7 @@ $ pip install pyccoma
 To download a single episode, simply use:
 
 ```bash
-$ pyccoma https://piccoma.com/web/viewer/103981/2646730
+$ pyccoma https://piccoma.com/web/viewer/60171/1575237
 ```
 
 You can also pass multiple links (separated by whitespace) to download in one go, then use the **--archive** option to output to a cbz archive.
